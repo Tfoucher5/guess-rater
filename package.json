@@ -4,10 +4,13 @@
   "type": "module",
   "description": "A framework-agnostic string comparison and similarity package.",
   "keywords": [
-    "similarity",
-    "string",
     "levenshtein",
-    "match"
+    "distance",
+    "string-comparison",
+    "blind-test",
+    "music",
+    "normalization",
+    "guess-rater"
   ],
   "license": "MIT",
   "author": "Theo Foucher",
