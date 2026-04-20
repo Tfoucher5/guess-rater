@@ -1,4 +1,6 @@
 # 🎯 Guess-Rater
+[![npm version](https://img.shields.io/npm/v/guess-rater.svg?style=flat-square)](https://www.npmjs.com/package/guess-rater)
+[![npm downloads](https://img.shields.io/npm/dm/guess-rater.svg?style=flat-square)](https://www.npmjs.com/package/guess-rater)
 
 `guess-rater` est un moteur de comparaison de chaînes de caractères léger et performant. Il permet de calculer la similarité entre deux entrées en appliquant des algorithmes de distance (Levenshtein) combinés à une normalisation configurable.
 
