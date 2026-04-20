@@ -3,7 +3,7 @@ name: Publish to NPM
 on:
   push:
     branches:
-      - master  # Change en 'main' si c'est le nom de ta branche principale
+      - master # ou 'main' selon ton repo
 
 jobs:
   publish:
@@ -18,10 +18,12 @@ jobs:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
+      # Cette étape crée le lien entre ton secret GitHub et NPM
+      - name: Authenticate with NPM
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
       - name: Install dependencies
         run: npm install
 
       - name: Publish to NPM
         run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
