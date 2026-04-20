@@ -3,7 +3,7 @@ name: Publish to NPM
 on:
   push:
     branches:
-      - master # ou 'main' selon ton repo
+      - master # Vérifie bien que ta branche s'appelle master (et pas main)
 
 jobs:
   publish:
@@ -17,13 +17,15 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-
-      # Cette étape crée le lien entre ton secret GitHub et NPM
-      - name: Authenticate with NPM
-        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+          # Cette option indique à l'action d'écrire le token dans le .npmrc automatiquement
+          scope: '' 
 
       - name: Install dependencies
         run: npm install
 
       - name: Publish to NPM
+        # L'argument --access public est vital pour les nouveaux packages
         run: npm publish --access public
+        env:
+          # C'est cette variable que setup-node utilise pour l'auth
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
