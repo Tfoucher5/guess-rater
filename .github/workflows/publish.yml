@@ -20,9 +20,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Authenticate and Publish
-        run: |
-          npm config set //registry.npmjs.org/:_authToken=${NPM_TOKEN}
-          npm publish --access public
+      - name: Publish to NPM
+        # On injecte le token directement dans la config npm via les arguments
+        run: npm publish --access public --//registry.npmjs.org/:_authToken=${NPM_TOKEN}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
