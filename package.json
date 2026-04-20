@@ -2,20 +2,29 @@
   "name": "guess-rater",
   "version": "1.0.1",
   "type": "module",
-  "description": "A framework-agnostic string comparison and similarity package.",
+  "description": "A high-performance fuzzy matching and string normalization engine for flexible data comparison.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tfoucher5/guess-rater.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Tfoucher5/guess-rater/issues"
+  },
+  "homepage": "https://github.com/Tfoucher5/guess-rater#readme",
   "keywords": [
+    "fuzzy-matching",
     "levenshtein",
-    "distance",
-    "string-comparison",
-    "blind-test",
-    "music",
-    "normalization",
-    "guess-rater"
+    "string-similarity",
+    "data-normalization",
+    "algorithm",
+    "vanilla-js",
+    "data-validation"
   ],
   "license": "MIT",
   "author": "Theo Foucher",
-  "main": "index.js",
-  "scripts": {
-    "test": "test.js"
-  }
+  "exports": "./src/index.js",
+  "files": [
+    "src",
+    "README.md"
+  ]
 }

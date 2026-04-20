@@ -1,38 +1,35 @@
 # 🎯 Guess-Rater
 
-Un comparateur de chaînes de caractères ultra-rapide et tolérant aux fautes de frappe, idéal pour les blind tests, les quiz et les formulaires. Agnostique (Vanilla JS) et sans dépendances.
+`guess-rater` est un moteur de comparaison de chaînes de caractères léger et performant. Il permet de calculer la similarité entre deux entrées en appliquant des algorithmes de distance (Levenshtein) combinés à une normalisation configurable.
 
-## 📦 Installation
+## ✨ Points forts
+
+* 🚀 **Ultra-léger** : Aucune dépendance externe.
+* 🛠 **Flexible** : Conçu pour être étendu avec de nouveaux paramètres de normalisation.
+* 🧩 **Agnostique** : Fonctionne partout (Navigateur, Node.js, SvelteKit, React, etc.).
+
+## 🚀 Installation
 
 ```bash
 npm install guess-rater
 ```
 
-# 🚀 Utilisation rapide
+## 📖 Exemples d'utilisation
+
+Comparaison standard
 
 ```JavaScript
-import { isMatch, getSimilarityScore } from 'guess-rater';
+import { getSimilarityScore } from 'guess-rater';
 
-// 1. Obtenir un pourcentage de similarité
-const score = getSimilarityScore("Architects", "architcts");
-console.log(score); // 90
+// Idéal pour la validation de formulaires ou la recherche intuitive
+const score = getSimilarityScore("Jean-Baptiste Poquelin", "jean baptiste poquelin");
+console.log(score); // 100 (grâce à la normalisation par défaut)
+Logique de correspondance (Match)
+JavaScript
+import { isMatch } from 'guess-rater';
 
-// 2. Vérifier une correspondance avec tolérance (défaut: 80%)
-const match = isMatch("PLK", "pplk", 60);
-console.log(match); // true
+// Vérifie si l'entrée utilisateur est assez proche de la référence
+if (isMatch("Molière", "Moliere", 85)) {
+  console.log("Correspondance trouvée !");
+}
 ```
-
-# ⚙️ Options avancées
-
-Le package gère intelligemment la ponctuation et les accents par défaut, mais vous gardez le contrôle :
-
-```JavaScript
-isMatch("AC/DC", "ac dc"); // true (La ponctuation est gérée par défaut)
-
-// Forcer la ponctuation stricte
-isMatch("AC/DC", "ac dc", 80, { removePunctuation: false }); // false
-```
-
-# 📄 Licence
-
-MIT
