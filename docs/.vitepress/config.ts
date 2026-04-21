@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
+  base: '/guess-rater/',
+  
   title: 'Guess‑Rater',
   description: 'Flexible fuzzy matching for JavaScript',
 
