@@ -21,8 +21,8 @@ export function getLevenshteinDistance(a, b) {
         [left, right] = [right, left];
     }
 
-    const previousRow = Array.from({ length: left.length + 1 }, (_, i) => i);
-    const currentRow = new Array(left.length + 1);
+    let previousRow = Array.from({ length: left.length + 1 }, (_, i) => i);
+    let currentRow = new Array(left.length + 1);
 
     for (let i = 1; i <= right.length; i += 1) {
         currentRow[0] = i;
@@ -38,9 +38,7 @@ export function getLevenshteinDistance(a, b) {
         );
         }
 
-        for (let j = 0; j < previousRow.length; j += 1) {
-        previousRow[j] = currentRow[j];
-        }
+        [previousRow, currentRow] = [currentRow, previousRow];
     }
 
     return previousRow[left.length];
