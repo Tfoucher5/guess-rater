@@ -1,8 +1,8 @@
 {
   "name": "guess-rater",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "type": "module",
-  "description": "A high-performance fuzzy matching and string normalization engine for flexible data comparison.",
+  "description": "A flexible fuzzy matching and string normalization engine for JavaScript.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Tfoucher5/guess-rater.git"
@@ -14,17 +14,29 @@
   "keywords": [
     "fuzzy-matching",
     "levenshtein",
+    "jaro-winkler",
+    "token-sort",
+    "token-set",
     "string-similarity",
     "data-normalization",
-    "algorithm",
+    "search",
+    "matching",
     "vanilla-js",
     "data-validation"
   ],
   "license": "MIT",
   "author": "Theo Foucher",
-  "exports": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "files": [
     "src",
-    "README.md"
-  ]
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test",
+    "test:watch": "node --test --watch"
+  }
 }
