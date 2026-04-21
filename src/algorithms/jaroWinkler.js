@@ -23,13 +23,13 @@ function getJaroValue(a, b) {
         const end = Math.min(i + matchDistance + 1, lenB);
 
         for (let j = start; j < end; j += 1) {
-        if (bMatches[j]) continue;
-        if (a[i] !== b[j]) continue;
+            if (bMatches[j]) continue;
+            if (a[i] !== b[j]) continue;
 
-        aMatches[i] = true;
-        bMatches[j] = true;
-        matches += 1;
-        break;
+            aMatches[i] = true;
+            bMatches[j] = true;
+            matches += 1;
+            break;
         }
     }
 
@@ -44,11 +44,11 @@ function getJaroValue(a, b) {
         if (!aMatches[i]) continue;
 
         while (!bMatches[k]) {
-        k += 1;
+            k += 1;
         }
 
         if (a[i] !== b[k]) {
-        transpositions += 1;
+            transpositions += 1;
         }
 
         k += 1;
@@ -59,16 +59,16 @@ function getJaroValue(a, b) {
         matches / lenB +
         (matches - transpositions / 2) / matches) / 3
     );
-    }
+}
 
-    export function getJaroScore(a, b) {
+export function getJaroScore(a, b) {
     validateStringInput(a, 'a');
     validateStringInput(b, 'b');
 
     return roundScore(getJaroValue(a, b) * 100);
-    }
+}
 
-    export function getJaroWinklerScore(a, b, options = {}) {
+export function getJaroWinklerScore(a, b, options = {}) {
     validateStringInput(a, 'a');
     validateStringInput(b, 'b');
 
@@ -86,7 +86,7 @@ function getJaroValue(a, b) {
         prefixLength += 1;
     }
 
-  const winkler = jaro + prefixLength * prefixScale * (1 - jaro);
+    const winkler = jaro + prefixLength * prefixScale * (1 - jaro);
 
-  return roundScore(clamp(winkler * 100, 0, 100));
+    return roundScore(clamp(winkler * 100, 0, 100));
 }
