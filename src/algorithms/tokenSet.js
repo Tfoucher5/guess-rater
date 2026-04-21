@@ -27,6 +27,10 @@ export function getTokenSetScore(a, b, options = {}) {
         return 100;
     }
 
+    if (leftTokens.length === 0 || rightTokens.length === 0) {
+        return 0;
+    }
+
     const rightSet = new Set(rightTokens);
 
     const intersection = leftTokens.filter((token) => rightSet.has(token));
