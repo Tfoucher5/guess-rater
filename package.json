@@ -29,6 +29,7 @@
   "exports": {
     ".": "./src/index.js"
   },
+  "types": "./src/index.d.ts",
   "files": [
     "src",
     "README.md",
