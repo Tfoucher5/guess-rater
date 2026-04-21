@@ -49,6 +49,12 @@ function computeSingleAlgorithmScore(algorithm, left, right, options) {
     let weightedScore = 0;
 
     for (const [algorithm, weight] of validEntries) {
+        if (algorithm === 'hybrid') {
+            throw new Error(
+                '[guess-rater] "hybrid" ne peut pas être utilisé comme sous-algorithme dans les poids hybrides.'
+            );
+        }
+
         validateAlgorithm(algorithm);
 
         const score = computeSingleAlgorithmScore(algorithm, left, right, options);
