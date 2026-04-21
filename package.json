@@ -10,7 +10,7 @@
   "bugs": {
     "url": "https://github.com/Tfoucher5/guess-rater/issues"
   },
-  "homepage": "https://github.com/Tfoucher5/guess-rater#readme",
+  "homepage": "https://tfoucher5.github.io/guess-rater/",
   "keywords": [
     "fuzzy-matching",
     "levenshtein",
@@ -38,6 +38,12 @@
   "sideEffects": false,
   "scripts": {
     "test": "node --test",
-    "test:watch": "node --test --watch"
+    "test:watch": "node --test --watch",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
   }
 }

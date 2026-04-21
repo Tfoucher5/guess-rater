@@ -9,26 +9,30 @@
 [![GitHub stars](https://img.shields.io/github/stars/Tfoucher5/guess-rater?style=social)](https://github.com/Tfoucher5/guess-rater)
 [![issues](https://img.shields.io/github/issues/Tfoucher5/guess-rater)](https://github.com/Tfoucher5/guess-rater/issues)
 
-`guess-rater` est un moteur de comparaison de chaînes de caractères léger, modulaire et sans dépendance pour JavaScript.
+`guess-rater` is a lightweight, dependency‑free and highly configurable
+string similarity engine for JavaScript.
 
-Il permet de :
+It can be used to:
 
-- normaliser des chaînes,
-- calculer des scores de similarité,
-- vérifier si deux chaînes correspondent,
-- classer une liste de candidats,
-- trouver la meilleure correspondance,
-- combiner plusieurs stratégies de matching.
+- normalize strings
+- compute similarity scores
+- validate matches with thresholds
+- rank multiple candidates
+- find the best match in a list
+- combine multiple matching strategies
+
+📘 **Full documentation:**  
+https://tfoucher5.github.io/guess-rater/
 
 ---
 
-## ✨ Pourquoi Guess-Rater ?
+## ✨ Why Guess‑Rater?
 
-- **Léger** : aucune dépendance externe
-- **Flexible** : plusieurs algorithmes selon le contexte
-- **Pratique** : API simple pour les cas courants, configurable pour les cas avancés
-- **Polyvalent** : recherche tolérante, quiz, validation de formulaires, dédoublonnage, matching de produits, etc.
-- **Rétrocompatible** : `getSimilarityScore(...)` reste disponible
+- **Lightweight** — zero external dependencies
+- **Flexible** — multiple algorithms depending on your use‑case
+- **Practical** — simple API for common cases, powerful options for advanced ones
+- **Versatile** — fuzzy search, quizzes, form validation, deduplication, product matching
+- **Backward compatible** — legacy APIs like `getSimilarityScore()` are still supported
 
 ---
 
@@ -53,11 +57,11 @@ console.log(isMatch('Saint-Nazaire', 'saint nazaire', 85)); // true
 
 ---
 
-## 📚 API
+## 📚 API overview
 
-### `rate(a, b, options?)`
+### rate(a, b, options?)
 
-Retourne un score de similarité sur 100.
+Compute a similarity score between two strings.
 
 ```js
 import { rate } from 'guess-rater';
@@ -68,26 +72,15 @@ console.log(score); // 100
 
 ---
 
-### `getSimilarityScore(a, b, options?)`
+### getSimilarityScore(a, b, options?)
 
-Alias rétrocompatible de `rate`.
-
-```js
-import { getSimilarityScore } from 'guess-rater';
-
-const score = getSimilarityScore(
-  'Jean-Baptiste Poquelin',
-  'jean baptiste poquelin'
-);
-
-console.log(score); // 100
-```
+Backward‑compatible alias of `rate()`.
 
 ---
 
-### `isMatch(a, b, thresholdOrOptions?)`
+### isMatch(a, b, thresholdOrOptions?)
 
-Retourne `true` ou `false`.
+Return a boolean indicating whether two strings match.
 
 ```js
 import { isMatch } from 'guess-rater';
@@ -97,68 +90,44 @@ console.log(isMatch('Molière', 'Moliere', 85)); // true
 
 ---
 
-### `rankCandidates(input, candidates, options?)`
+### rankCandidates(input, candidates, options?)
 
-Classe les candidats du meilleur au moins bon.
+Rank multiple candidates from best to worst.
 
 ```js
 import { rankCandidates } from 'guess-rater';
 
 const results = rankCandidates(
   'peugeot 208',
-  [
-    'Peugeot 308',
-    '208 Peugeot',
-    'Renault Clio'
-  ],
-  {
-    algorithm: 'tokenSort'
-  }
+  ['Peugeot 308', '208 Peugeot', 'Renault Clio'],
+  { algorithm: 'tokenSort' }
 );
 
 console.log(results);
-/*
-[
-  { value: '208 Peugeot', score: 100, index: 1 },
-  { value: 'Peugeot 308', score: 63.64, index: 0 },
-  { value: 'Renault Clio', score: 8.33, index: 2 }
-]
-*/
 ```
 
 ---
 
-### `findBestMatch(input, candidates, options?)`
+### findBestMatch(input, candidates, options?)
 
-Retourne la meilleure correspondance.
+Return only the best matching candidate.
 
 ```js
 import { findBestMatch } from 'guess-rater';
 
 const best = findBestMatch(
   'moliere',
-  [
-    'Voltaire',
-    'Moliere',
-    'Victor Hugo'
-  ]
+  ['Voltaire', 'Moliere', 'Victor Hugo']
 );
 
 console.log(best);
-/*
-{
-  value: 'Moliere',
-  score: 100,
-  index: 1
-}
-*/
 ```
 
 ---
 
-### `createMatcher(baseOptions)`
+### createMatcher(baseOptions)
 
-Crée une instance préconfigurée.
+Create a reusable, preconfigured matcher instance.
 
 ```js
 import { createMatcher } from 'guess-rater';
@@ -178,7 +147,7 @@ console.log(matcher.isMatch('Saint-Nazaire', 'st nazaire'));
 
 ---
 
-## 🧹 Normalisation
+## 🧹 Normalization
 
 ```js
 import { normalize } from 'guess-rater';
@@ -187,67 +156,31 @@ const result = normalize('Jean-Baptiste Poquelin');
 console.log(result); // "jean baptiste poquelin"
 ```
 
-### Options de normalisation
+Supported normalization options include:
 
-```js
-{
-  caseSensitive: false,
-  removeAccents: true,
-  removePunctuation: true,
-  punctuationStrategy: 'space',
-  trim: true,
-  collapseWhitespace: true,
-  replacements: {},
-  removeWords: [],
-  sortTokens: false
-}
-```
-
-### Exemple avec options avancées
-
-```js
-import { normalize } from 'guess-rater';
-
-const result = normalize('La ville de Saint-Nazaire', {
-  removeWords: ['la', 'de'],
-  replacements: {
-    st: 'saint'
-  }
-});
-
-console.log(result); // "ville saint nazaire"
-```
+- case sensitivity
+- accent removal
+- punctuation handling
+- whitespace normalization
+- word removal
+- token sorting
+- custom replacements
 
 ---
 
-## 🔍 Algorithmes disponibles
+## 🔍 Algorithms
 
-### `levenshtein`
-Bon choix pour les comparaisons générales caractère par caractère.
+Available algorithms:
 
-### `jaroWinkler`
-Très utile pour les noms, prénoms et fautes légères.
-
-### `tokenSort`
-Pratique quand les mots sont les mêmes mais dans un ordre différent.
-
-Exemple :
-- `peugeot 208 active`
-- `208 peugeot active`
-
-### `tokenSet`
-Utile quand une chaîne contient des mots supplémentaires.
-
-Exemple :
-- `Peugeot 208`
-- `Peugeot 208 Active`
-
-### `hybrid`
-Combine plusieurs algorithmes avec des poids personnalisés.
+- **levenshtein** — character‑level distance
+- **jaroWinkler** — great for names
+- **tokenSort** — ignores word order
+- **tokenSet** — handles extra or missing words
+- **hybrid** — weighted combination of multiple strategies
 
 ---
 
-## ⚙️ Exemple avancé
+## ⚙️ Advanced example (hybrid + explain)
 
 ```js
 import { rate } from 'guess-rater';
@@ -263,80 +196,38 @@ const result = rate('peugeot 208 active', '208 peugeot active', {
 });
 
 console.log(result);
-/*
-{
-  score: 95.45,
-  match: true,
-  threshold: 80,
-  algorithm: 'hybrid',
-  input: 'peugeot 208 active',
-  target: '208 peugeot active',
-  normalizedLeft: 'peugeot 208 active',
-  normalizedRight: '208 peugeot active',
-  details: {
-    normalize: { ... },
-    hybrid: {
-      levenshtein: { score: 52.94, weight: 0.2 },
-      jaroWinkler: { score: 88.38, weight: 0.2 },
-      tokenSet: { score: 100, weight: 0.6 }
-    }
-  }
-}
-*/
 ```
 
 ---
 
-## 💡 Cas d’usage
+## 💡 Use cases
 
-`guess-rater` peut être utilisé pour :
+Guess‑Rater is commonly used for:
 
-- la validation de formulaires,
-- la recherche tolérante,
-- les quiz / jeux de saisie,
-- le matching de noms de personnes,
-- le rapprochement de produits,
-- le nettoyage de données,
-- les imports CSV,
-- les bots et assistants,
-- le dédoublonnage de listes.
-
----
-
-## 🔄 Compatibilité
-
-Le package conserve l’ancienne API :
-
-- `getSimilarityScore(...)`
-- `isMatch(...)`
-
-Tu peux donc migrer progressivement vers la nouvelle API sans casser l’existant.
+- fuzzy search
+- form validation
+- quiz answer validation
+- person name matching
+- product title matching
+- data cleaning and deduplication
+- CSV imports
+- bots and assistants
 
 ---
 
-## 🛣️ Roadmap
+## 🤝 Contributing
 
-Idées pour les prochaines versions :
+Guess‑Rater is open‑source.
 
-- ajout de `damerauLevenshtein`
-- presets (`personName`, `cityName`, `productTitle`, `quizAnswer`)
-- `filterMatches(...)`
-- mode batch / comparaison de listes
-- typages TypeScript
-- benchmarks et documentation avancée
+You can:
+- fork the repository
+- propose improvements via pull requests
+- suggest ideas or report issues
 
----
-
-## 🤝 Contribution
-
-Les issues et suggestions sont les bienvenues :
-
-- ouvrir une issue
-- proposer une amélioration
-- partager un cas d’usage concret
+All pull requests are reviewed carefully before being accepted.
 
 ---
 
-## 📄 Licence
+## 📄 License
 
 MIT
