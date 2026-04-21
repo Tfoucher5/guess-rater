@@ -1,0 +1,1 @@
+import{_ as i,o as a,c as t,ae as n}from"./chunks/framework.DQWLcdWU.js";const E=JSON.parse('{"title":"rate()","description":"","frontmatter":{},"headers":[],"relativePath":"api/rate.md","filePath":"api/rate.md"}'),l={name:"api/rate.md"};function h(e,s,p,k,r,o){return a(),t("div",null,[...s[0]||(s[0]=[n("",63)])])}const g=i(l,[["render",h]]);export{E as __pageData,g as default};
