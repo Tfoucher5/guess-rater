@@ -49,6 +49,9 @@ export interface HybridWeights {
   /** Weight for Jaro-Winkler algorithm */
   jaroWinkler?: number;
 
+  /** Weight for token-sort algorithm */
+  tokenSort?: number;
+
   /** Weight for token-set algorithm */
   tokenSet?: number;
 }
@@ -105,13 +108,18 @@ export interface RateExplainResult {
 }
 
 /**
- * Ranked string candidate
+ * Ranked string candidate (base form, without explain)
  */
 export interface RankedCandidate {
   value: string;
   score: number;
   index: number;
 }
+
+/**
+ * Ranked string candidate when explain: true is passed
+ */
+export type RankedCandidateExplain = RankedCandidate & RateExplainResult;
 
 /**
  * Reusable matcher instance
@@ -143,7 +151,7 @@ export interface Matcher {
     input: string,
     candidates: string[],
     options?: RateOptions
-  ): RankedCandidate[];
+  ): RankedCandidate[] | RankedCandidateExplain[];
 
   /**
    * Returns best match
@@ -152,7 +160,7 @@ export interface Matcher {
     input: string,
     candidates: string[],
     options?: RateOptions
-  ): RankedCandidate | null;
+  ): RankedCandidate | RankedCandidateExplain | null;
 
   /**
    * Normalizes text input
@@ -167,6 +175,13 @@ export interface Matcher {
  * Computes similarity score
  */
 export function rate(
+  leftInput: string,
+  rightInput: string,
+  options?: RateOptions
+): number | RateExplainResult;
+
+/** Alias of rate — rétrocompatibilité */
+export function getSimilarityScore(
   leftInput: string,
   rightInput: string,
   options?: RateOptions
@@ -188,7 +203,7 @@ export function rankCandidates(
   input: string,
   candidates: string[],
   options?: RateOptions
-): RankedCandidate[];
+): RankedCandidate[] | RankedCandidateExplain[];
 
 /**
  * Returns best match
@@ -197,12 +212,18 @@ export function findBestMatch(
   input: string,
   candidates: string[],
   options?: RateOptions
-): RankedCandidate | null;
+): RankedCandidate | RankedCandidateExplain | null;
 
 /**
  * Normalizes input text
  */
 export function normalize(
+  input: string,
+  options?: NormalizeOptions
+): string;
+
+/** Alias of normalize — rétrocompatibilité */
+export function normalizeString(
   input: string,
   options?: NormalizeOptions
 ): string;
@@ -213,3 +234,33 @@ export function normalize(
 export function createMatcher(
   baseOptions?: RateOptions
 ): Matcher;
+
+/** Computes Levenshtein edit distance */
+export function getLevenshteinDistance(a: string, b: string): number;
+
+/** Converts Levenshtein distance to a 0-100 similarity score */
+export function getLevenshteinScore(a: string, b: string): number;
+
+/** Computes Jaro similarity score (0-100) */
+export function getJaroScore(a: string, b: string): number;
+
+/** Computes Jaro-Winkler similarity score (0-100) */
+export function getJaroWinklerScore(
+  a: string,
+  b: string,
+  options?: { prefixScale?: number; maxPrefixLength?: number }
+): number;
+
+/** Computes token-sort similarity score (0-100) */
+export function getTokenSortScore(
+  a: string,
+  b: string,
+  options?: { baseAlgorithm?: 'levenshtein' | 'jaroWinkler'; jaroWinkler?: object }
+): number;
+
+/** Computes token-set similarity score (0-100) */
+export function getTokenSetScore(
+  a: string,
+  b: string,
+  options?: { baseAlgorithm?: 'levenshtein' | 'jaroWinkler'; jaroWinkler?: object }
+): number;
