@@ -1,10 +1,6 @@
 import { roundScore, clamp } from '../core/helpers.js';
 import { validateStringInput } from '../core/validate.js';
 
-/**
- * Calcule la distance de Levenshtein entre deux chaînes.
- * Retourne le nombre minimal d'opérations pour transformer a en b.
- */
 export function getLevenshteinDistance(a, b) {
     validateStringInput(a, 'a');
     validateStringInput(b, 'b');
@@ -16,40 +12,34 @@ export function getLevenshteinDistance(a, b) {
     let left = a;
     let right = b;
 
-    // Petite optimisation mémoire : on garde la chaîne la plus courte à gauche
     if (left.length > right.length) {
         [left, right] = [right, left];
     }
 
-    const previousRow = Array.from({ length: left.length + 1 }, (_, i) => i);
-    const currentRow = new Array(left.length + 1);
+    let previousRow = Array.from({ length: left.length + 1 }, (_, i) => i);
+    let currentRow = new Array(left.length + 1);
 
     for (let i = 1; i <= right.length; i += 1) {
         currentRow[0] = i;
         const rightChar = right.charAt(i - 1);
 
         for (let j = 1; j <= left.length; j += 1) {
-        const cost = left.charAt(j - 1) === rightChar ? 0 : 1;
+            const cost = left.charAt(j - 1) === rightChar ? 0 : 1;
 
-        currentRow[j] = Math.min(
-            currentRow[j - 1] + 1,      // insertion
-            previousRow[j] + 1,         // suppression
-            previousRow[j - 1] + cost   // substitution
-        );
+            currentRow[j] = Math.min(
+                currentRow[j - 1] + 1,
+                previousRow[j] + 1,
+                previousRow[j - 1] + cost
+            );
         }
 
-        for (let j = 0; j < previousRow.length; j += 1) {
-        previousRow[j] = currentRow[j];
-        }
+        [previousRow, currentRow] = [currentRow, previousRow];
     }
 
     return previousRow[left.length];
-    }
+}
 
-    /**
-     * Convertit la distance de Levenshtein en score de similarité sur 100.
-     */
-    export function getLevenshteinScore(a, b) {
+export function getLevenshteinScore(a, b) {
     const maxLen = Math.max(a.length, b.length);
 
     if (maxLen === 0) {
