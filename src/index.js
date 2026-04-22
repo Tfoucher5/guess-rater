@@ -4,6 +4,7 @@ export { rankCandidates } from './api/rankCandidates.js';
 export { findBestMatch } from './api/findBestMatch.js';
 export { createMatcher } from './api/createMatcher.js';
 export { filterMatches } from './api/filterMatches.js';
+export { extract } from './api/extract.js';
 
 export { normalize, normalizeString } from './normalize/normalize.js';
 

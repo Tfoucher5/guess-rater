@@ -18,6 +18,7 @@ Guess‑Rater exports the following functions:
 - `rankCandidates`
 - `findBestMatch`
 - `filterMatches`
+- `extract`
 - `createMatcher`
 
 Example import:

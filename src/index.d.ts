@@ -370,6 +370,15 @@ export interface Matcher {
   ): RankedCandidate | RankedCandidateExplain | null;
 
   /**
+   * Extracts top matches (rank + filter + limit).
+   */
+  extract(
+    input: string,
+    candidates: string[],
+    options?: RateOptions
+  ): RankedCandidate[] | RankedCandidateExplain[] | string[];
+
+  /**
    * Normalizes text input (pure preprocessing).
    */
   normalize(
@@ -473,6 +482,32 @@ export function filterMatches(
   input: string,
   candidates: string[],
   options: (RateOptions & { return: 'entries'; explain: true })
+): RankedCandidateExplain[];
+
+/**
+ * Extracts the top matches from a list (rank + filter + limit).
+ *
+ * Default: returns string[] (values only)
+ * Use { return: 'entries' } for detailed results.
+ *
+ * Note: explain is only applied when return: 'entries'.
+ */
+export function extract(
+  input: string,
+  candidates: string[],
+  options?: (RateOptions & { limit?: number; return?: 'values'; explain?: boolean })
+): string[];
+
+export function extract(
+  input: string,
+  candidates: string[],
+  options: (RateOptions & { limit?: number; return: 'entries'; explain?: false })
+): RankedCandidate[];
+
+export function extract(
+  input: string,
+  candidates: string[],
+  options: (RateOptions & { limit?: number; return: 'entries'; explain: true })
 ): RankedCandidateExplain[];
 
 /**
