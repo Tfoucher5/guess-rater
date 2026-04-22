@@ -79,6 +79,11 @@ export interface RateOptions {
   explain?: boolean;
 
   /**
+   * Also evaluates without spaces and picks the best result
+   */
+  spaceInsensitive?: boolean;
+
+  /**
    * Normalization behavior
    */
   normalize?: NormalizeOptions;

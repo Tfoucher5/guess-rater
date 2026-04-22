@@ -16,6 +16,7 @@ export const DEFAULT_RATE_OPTIONS = Object.freeze({
     algorithm: 'levenshtein', // "levenshtein" | "jaroWinkler" | "tokenSort" | "tokenSet" | "hybrid"
     threshold: 80,
     explain: false,
+    spaceInsensitive: false,
     normalize: DEFAULT_NORMALIZE_OPTIONS,
     jaroWinkler: {
     prefixScale: 0.1,

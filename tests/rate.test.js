@@ -49,5 +49,45 @@ import {
         algorithm: 'tokenSort'
     });
 
+    test('spaceInsensitive boosts levenshtein when spaces are missing', () => {
+    const score = rate('stairwaytoheaven', 'stairway to heaven', {
+        algorithm: 'levenshtein',
+        spaceInsensitive: true
+    });
+    assert.equal(score, 100);
+    });
+
+    test('spaceInsensitive boosts jaroWinkler when spaces are missing', () => {
+    const score = rate('nomoresorrow', 'no more sorrow', {
+        algorithm: 'jaroWinkler',
+        spaceInsensitive: true
+    });
+    assert.equal(score, 100);
+    });
+
+    test('spaceInsensitive does not change tokenSet behavior', () => {
+    const a = rate('iphone14pro', 'iphone 14 pro', { algorithm: 'tokenSet' });
+    const b = rate('iphone14pro', 'iphone 14 pro', { algorithm: 'tokenSet', spaceInsensitive: true });
+    assert.equal(a, b);
+    });
+
+    test('spaceInsensitive can improve hybrid for compact inputs', () => {
+    const noSI = rate('stairwaytoheaven', 'stairway to heaven', { algorithm: 'hybrid' });
+    const withSI = rate('stairwaytoheaven', 'stairway to heaven', { algorithm: 'hybrid', spaceInsensitive: true });
+    assert.ok(withSI >= noSI);
+    });
+
+    test('spaceInsensitive is explainable for char-based algorithms', () => {
+    const result = rate('nomoresorrow', 'no more sorrow', {
+        algorithm: 'levenshtein',
+        spaceInsensitive: true,
+        explain: true
+    });
+
+    assert.equal(result.details.spaceInsensitive.levenshtein.enabled, true);
+    assert.equal(result.details.spaceInsensitive.levenshtein.applied, true);
+    });
+
+
     assert.equal(best.value, '208 Peugeot');
 });

@@ -7,32 +7,114 @@ import { getJaroWinklerScore } from '../algorithms/jaroWinkler.js';
 import { getTokenSortScore } from '../algorithms/tokenSort.js';
 import { getTokenSetScore } from '../algorithms/tokenSet.js';
 
-function computeSingleAlgorithmScore(algorithm, left, right, options) {
+function stripWhitespace(str) {
+  return str.replace(/\s+/g, '');
+}
+
+function maxScoreWithSpaceInsensitive(left, right, enabled, scorer) {
+	const standardScore = scorer(left, right);
+
+	if (!enabled) {
+			return { score: standardScore };
+	}
+
+	const compactLeft = stripWhitespace(left);
+	const compactRight = stripWhitespace(right);
+	const compactScore = scorer(compactLeft, compactRight);
+
+	if (compactScore >= standardScore) {
+			return {
+			score: compactScore,
+			details: {
+					enabled: true,
+					applied: true,
+					chosen: 'compact',
+					standardScore,
+					compactScore,
+					compactLeft,
+					compactRight
+			}
+			};
+	}
+
+	return {
+			score: standardScore,
+			details: {
+			enabled: true,
+			applied: true,
+			chosen: 'standard',
+			standardScore,
+			compactScore,
+			compactLeft,
+			compactRight
+			}
+	};
+}
+
+function computeSingleAlgorithmScore(algorithm, left, right, options, spaceCollector) {
     switch (algorithm) {
-        case 'levenshtein':
-            return getLevenshteinScore(left, right);
+        
+		case 'levenshtein': {
+		const res = maxScoreWithSpaceInsensitive(
+			left,
+			right,
+			options.spaceInsensitive === true,
+			(a, b) => getLevenshteinScore(a, b)
+		);
 
-        case 'jaroWinkler':
-            return getJaroWinklerScore(left, right, options.jaroWinkler);
+		if (spaceCollector && res.details) {
+			spaceCollector.levenshtein = res.details;
+		} else if (spaceCollector && options.spaceInsensitive === true) {
+			spaceCollector.levenshtein = { enabled: true, applied: true, chosen: 'standard', standardScore: res.score, compactScore: res.score, compactLeft: stripWhitespace(left), compactRight: stripWhitespace(right) };
+		}
 
-        case 'tokenSort':
-            return getTokenSortScore(left, right, {
+		return res.score;
+		}
+
+
+        case 'jaroWinkler': {
+		const res = maxScoreWithSpaceInsensitive(
+			left,
+			right,
+			options.spaceInsensitive === true,
+			(a, b) => getJaroWinklerScore(a, b, options.jaroWinkler)
+		);
+
+		if (spaceCollector && res.details) {
+			spaceCollector.jaroWinkler = res.details;
+		}
+
+		return res.score;
+		}
+
+        
+		case 'tokenSort': {
+		if (spaceCollector && options.spaceInsensitive === true) {
+			spaceCollector.tokenSort = { enabled: true, applied: false, reason: 'token-based algorithm' };
+		}
+		return getTokenSortScore(
+		left, right, {
                 ...options.tokenSort,
                 jaroWinkler: options.jaroWinkler
             });
+		}
 
-        case 'tokenSet':
-            return getTokenSetScore(left, right, {
-                ...options.tokenSet,
-                jaroWinkler: options.jaroWinkler
-            });
+        case 'tokenSet': {
+		if (spaceCollector && options.spaceInsensitive === true) {
+			spaceCollector.tokenSort = { enabled: true, applied: false, reason: 'token-based algorithm' };
+		}
+		return getTokenSetScore(left, right, {
+				...options.tokenSet,
+				jaroWinkler: options.jaroWinkler
+			});
+		}
 
         default:
             throw new Error(`[guess-rater] Algorithme non géré : "${algorithm}".`);
     }
 }
 
-function computeHybridScore(left, right, options) {
+function computeHybridScore(left, right, options, spaceCollector) {
     const validEntries = Object.entries(options.hybrid || {}).filter(
         ([, weight]) => typeof weight === 'number' && weight > 0
     );
@@ -57,7 +139,7 @@ function computeHybridScore(left, right, options) {
 
         validateAlgorithm(algorithm);
 
-        const score = computeSingleAlgorithmScore(algorithm, left, right, options);
+        const score = computeSingleAlgorithmScore(algorithm, left, right, options, spaceCollector);
 
         breakdown[algorithm] = {
             score,
@@ -82,12 +164,13 @@ export function rate(leftInput, rightInput, options = {}) {
 
     const normalizedLeft = normalize(leftInput, config.normalize);
     const normalizedRight = normalize(rightInput, config.normalize);
+	const spaceInsensitiveDetails = config.spaceInsensitive === true ? {} : null;
 
     let score;
     let breakdown;
 
     if (config.algorithm === 'hybrid') {
-        const hybridResult = computeHybridScore(normalizedLeft, normalizedRight, config);
+        const hybridResult = computeHybridScore(normalizedLeft, normalizedRight, config, config.explain ? spaceInsensitiveDetails : null);
         score = hybridResult.score;
         breakdown = hybridResult.breakdown;
     } else {
@@ -95,7 +178,8 @@ export function rate(leftInput, rightInput, options = {}) {
             config.algorithm,
             normalizedLeft,
             normalizedRight,
-            config
+            config,
+			config.explain ? spaceInsensitiveDetails : null
         );
     }
 
@@ -114,7 +198,8 @@ export function rate(leftInput, rightInput, options = {}) {
         normalizedRight,
         details: {
             normalize: config.normalize,
-            ...(breakdown ? { hybrid: breakdown } : {})
+            ...(breakdown ? { hybrid: breakdown } : {}),
+			...(spaceInsensitiveDetails ? { spaceInsensitive: spaceInsensitiveDetails } : {})
         }
     };
 }
