@@ -1,6 +1,6 @@
 {
   "name": "guess-rater",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "description": "A flexible fuzzy matching and string normalization engine for JavaScript.",
   "repository": {
