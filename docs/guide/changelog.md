@@ -7,7 +7,57 @@ The project follows **semantic versioning**:
 - MINOR — new features, backward‑compatible
 - PATCH — bug fixes, documentation, DX improvements
 
+
 ---
+
+## v1.2.1
+
+### Added
+- Major TypeScript / IDE DX improvements in `index.d.ts`:
+  - richer inline documentation (hover docs) for core options and behaviors
+  - clearer option typing for algorithm-specific configuration (`jaroWinkler`, `tokenSort`, `tokenSet`, `hybrid`)
+- Overloads for better return type inference:
+  - `rate(..., { explain: true })` is inferred as a detailed object
+  - `rate(..., { explain: false })` / default is inferred as a number
+  - similar inference improvements for `rankCandidates()` and `findBestMatch()` depending on `explain`
+
+### Improved
+- Autocomplete quality and discoverability of options in VS Code / WebStorm / TS-powered IDEs
+- Reduced common mistakes by making return types and option meanings explicit in tooltips
+
+### Notes
+- No runtime changes
+- Backward compatible
+- DX-only release (types & developer experience)
+
+---
+
+## v1.2.0
+
+### Added
+- New optional scoring feature: `spaceInsensitive?: boolean`
+  - when enabled, performs an additional comparison pass with all whitespace removed
+  - keeps the best score between standard vs compact (no-whitespace) comparison
+  - applies only to character-based algorithms (`levenshtein`, `jaroWinkler`)
+  - does not affect token-based algorithms (`tokenSort`, `tokenSet`)
+- Explain support for `spaceInsensitive`:
+  - when `explain: true`, details include which pass was selected and related scores
+- Test coverage for the new feature:
+  - boosts char-based algorithms when spaces are missing/extra
+  - confirms token-based algorithms remain unchanged
+  - validates hybrid remains coherent and can improve on compact inputs
+
+### Improved
+- Better matching for compact inputs and "no-spaces" user queries (e.g. `iphone14pro` vs `iphone 14 pro`)
+- Maintains token semantics by design (non-destructive, opt-in only)
+
+### Notes
+- No breaking changes
+- Backward compatible
+- Feature release focused on matching robustness
+
+---
+
 ## v1.1.2
 
 ### Added
