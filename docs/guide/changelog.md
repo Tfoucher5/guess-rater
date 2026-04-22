@@ -8,6 +8,41 @@ The project follows **semantic versioning**:
 - PATCH — bug fixes, documentation, DX improvements
 
 ---
+## v1.1.2
+
+### Added
+- Missing TypeScript exports in `index.d.ts`:
+  - `getSimilarityScore`
+  - `normalizeString`
+  - `getLevenshteinDistance`
+  - `getLevenshteinScore`
+  - `getJaroScore`
+  - `getJaroWinklerScore`
+  - `getTokenSortScore`
+  - `getTokenSetScore`
+- Added `tokenSort` to `HybridWeights`
+- New `RankedCandidateExplain` type for `explain: true` in `rankCandidates` and `findBestMatch`
+- 26 new test cases covering:
+  - low-level algorithms
+  - hybrid mode
+  - `createMatcher`
+  - `isMatch` with object options
+  - error cases (invalid type, unknown algorithm)
+
+### Fixed
+- Fixed a critical bug where `getTokenSetScore('', 'hello')` returned `100` instead of `0` when only one side was empty
+- Fixed a bug where using `'hybrid'` as a sub-algorithm in hybrid weights (for example `hybrid: { hybrid: 1 }`) produced a cryptic internal error; the error message is now explicit
+
+### Improved
+- Optimized Levenshtein performance by replacing the O(n) array copy at each iteration with an O(1) reference swap, reducing the main loop workload significantly
+- Increased total test coverage to 39 cases
+
+### Notes
+- No breaking changes
+- Backward compatible
+- Bug fix, type completeness, performance, and test coverage focused release
+
+---
 
 ## v1.1.1
 
