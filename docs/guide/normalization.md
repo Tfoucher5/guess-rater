@@ -12,12 +12,12 @@ You decide what matters and what does not.
 
 Most matching problems are not caused by wrong information, but by differences such as:
 
-- accents  
-- punctuation  
-- casing  
-- word order  
-- extra words  
-- typos or abbreviations  
+- accents
+- punctuation
+- casing
+- word order
+- extra words
+- typos or abbreviations
 
 Normalization solves this **before** any algorithm is applied.
 
@@ -32,15 +32,13 @@ Example:
 ```js
 import { rate } from 'guess-rater'
 
-rate('the mont st-michel', 'the mont saint michel', {
+rate('The Quick-Brown Fox', 'quick brown fox', {
   normalize: {
     removeWords: ['the'],
-    replacements: { st: 'saint' },
+    removePunctuation: true,
     sortTokens: true
   }
 })
-// rightResult : mont saint michel 
-// leftResult : mont saint michel 
 ```
 
 ---
@@ -59,18 +57,13 @@ normalize: {
 
 When `false`:
 ```
-Paris == paris == PARIS
+Hello == hello == HELLO
 ```
 
 When `true`:
 ```
-Paris != paris != PARIS
+Hello != hello != HELLO
 ```
-
-Recommended:
-- names → false
-- products → false
-- identifiers / codes → true
 
 ---
 
@@ -109,8 +102,8 @@ normalize: {
 
 Examples:
 ```
-SAINT-MICHEL → SAINT MICHEL
-renault/clio → renault clio
+HELLO-WORLD → HELLO WORLD
+foo/bar → foo bar
 ```
 
 ---
@@ -173,8 +166,8 @@ Useful for:
 ```js
 normalize: {
   replacements: {
-    st: 'saint',
-    nvm: 'nevermind'
+    nyc: 'new york city',
+    appple: 'apple'
   }
 }
 ```
@@ -194,13 +187,13 @@ Useful for:
 
 ```js
 normalize: {
-  removeWords: ['the']
+  removeWords: ['the', 'a', 'an']
 }
 ```
 
 Example:
 ```
-"the thing" → "thing"
+"the quick brown fox" → "quick brown fox"
 ```
 
 ---
@@ -221,8 +214,8 @@ This makes word order irrelevant.
 
 Examples:
 ```
-"Tower Eiffel" == "Eiffel Tower"
-"The Thing" == "Thing The"
+"John Smith" == "Smith John"
+"iPhone 14 Pro" == "Pro iPhone 14"
 ```
 
 Use it for:
@@ -235,6 +228,16 @@ Avoid it for:
 - IDs
 - codes
 - sentences where order matters
+
+---
+
+## Missing / extra spaces
+
+If your inputs may contain missing or extra spaces (e.g. `iphone14pro` vs `iphone 14 pro`),
+see the `spaceInsensitive` option (a scoring feature, not a normalization option):
+
+- See: [spaceInsensitive Option](/api/rate#spaceinsensitive)
+
 
 ---
 
