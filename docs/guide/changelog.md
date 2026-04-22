@@ -7,6 +7,25 @@ The project follows **semantic versioning**:
 - MINOR — new features, backward‑compatible
 - PATCH — bug fixes, documentation, DX improvements
 
+---
+
+## v1.3.0
+
+### Added
+- New list helper: `filterMatches()`
+  - filters candidates above a threshold
+  - default return is `string[]` (values only)
+  - optional `return: 'entries'` for detailed results (`{ value, score, index }`)
+  - optional `explain: true` when using `return: 'entries'`
+
+### Improved
+- Expanded list-matching toolbox without changing existing behaviors
+- Consistent “simple-by-default, detailed-on-demand” API style
+
+### Notes
+- No breaking changes
+- Backward compatible
+- Feature release focused on filtering / list workflows
 
 ---
 
