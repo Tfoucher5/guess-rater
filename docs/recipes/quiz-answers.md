@@ -1,155 +1,92 @@
-# Quiz answer validation
+# Recipe: Quiz answer validation
 
-This recipe shows how to validate **quiz or game answers**
-entered by users in a tolerant way.
+## The challenge
 
-Users often make:
-- typos
-- casing differences
-- punctuation mistakes
-- small word order changes
+Users type answers with typos, different casing, missing accents, or slight word variations:
 
-Guess‑Rater allows you to accept correct intent
-without requiring an exact match.
-
----
-
-## Basic example
-
-```js
-import { isMatch } from 'guess-rater'
-
-const expectedAnswer = 'new york'
-const userAnswer = 'New-York'
-
-const ok = isMatch(expectedAnswer, userAnswer)
-console.log(ok)
 ```
-
-By default, small formatting differences are ignored.
-
----
+Expected: "stairway to heaven"
+User types: "Stairway To Heaven"   → should pass
+User types: "stairway to heavon"   → should pass (typo)
+User types: "stairway"             → should fail (too short)
+```
 
 ## Recommended configuration
 
-For quiz answers, use:
-
-- accent removal
-- punctuation removal
-- token sorting (if order does not matter)
-- a slightly strict threshold
-
 ```js
-import { isMatch } from 'guess-rater'
+import { isMatch, findBestMatch } from 'guess-rater'
 
-const ok = isMatch('new york', 'York, New', {
-  threshold: 85,
+const config = {
+  algorithm: 'levenshtein',
   normalize: {
     removeAccents: true,
-    removePunctuation: true,
-    sortTokens: true
-  }
-})
-
-console.log(ok)
-```
-
----
-
-## Handling typos
-
-```js
-import { isMatch } from 'guess-rater'
-
-const ok = isMatch('mount everest', 'mount everst', {
+    removePunctuation: true
+  },
   threshold: 85
-})
-
-console.log(ok)
+}
 ```
 
-Small spelling mistakes are tolerated.
+**Why levenshtein?** Quiz answers are typically short, single-value strings. Levenshtein is the most predictable algorithm for character-level typos.
 
----
+**Why 85?** Strict enough to reject wrong answers, tolerant enough for common typos.
 
-## Using explain mode for debugging
-
-During development, explain mode helps tune thresholds.
+## Usage
 
 ```js
-import { rate } from 'guess-rater'
+// Simple validation
+isMatch('stairway to heaven', userAnswer, config)
 
-const result = rate('mount everest', 'mount everst', {
-  explain: true,
-  threshold: 85
-})
+// With custom threshold per question
+isMatch('42', userAnswer, { ...config, threshold: 100 }) // exact match for numbers
 
-console.log(result.score)
-console.log(result.match)
+// Multiple valid answers
+const validAnswers = ['stairway to heaven', 'led zeppelin iv', 'zoso']
+const best = findBestMatch(userAnswer, validAnswers, config)
+if (best && best.score >= 85) {
+  console.log('Correct!')
+}
 ```
 
-Once tuned, explain mode can be removed.
+## Calibrating tolerance
 
----
-
-## Case‑sensitive answers
-
-Some quizzes require exact casing (rare).
+For short answers (1–3 words), typo tolerance matters more:
 
 ```js
-isMatch('NASA', 'nasa', {
-  normalize: {
-    caseSensitive: true
-  }
-})
+// Too strict — rejects "colour" for "color"
+isMatch('color', 'colour', { threshold: 95 }) // false
+
+// Good — allows common spelling variants
+isMatch('color', 'colour', { threshold: 85 }) // true
 ```
 
-Use this only when casing is part of the correct answer.
-
----
-
-## Multiple valid answers
-
-You can validate against multiple acceptable answers.
+For factual answers where precision matters, increase the threshold:
 
 ```js
-import { findBestMatch } from 'guess-rater'
-
-const validAnswers = [
-  'new york',
-  'nyc',
-  'new york city'
-]
-
-const best = findBestMatch('NYC', validAnswers)
-
-console.log(best)
+isMatch('Louis XIV', userAnswer, { threshold: 92 }) // strict — no "Louis XIII"
 ```
 
----
+## Avoiding false positives on short strings
 
-## Threshold recommendation
+Very short strings score misleadingly high. Use a higher threshold or exact match:
 
-For quiz answers:
+```js
+// Risky: "cat" vs "car" scores 67 — passes at threshold 65
+isMatch('cat', 'car', { threshold: 65 }) // true
 
-- start around `80–90`
-- increase threshold if answers must be precise
-- lower threshold if answers are short or error‑prone
+// Better: use a strict threshold for 3-letter answers
+isMatch('cat', 'car', { threshold: 90 }) // false
+```
 
----
+## Debugging with explain mode
 
-## Notes
+During development, check the scores for expected matches and non-matches:
 
-- Avoid overly strict thresholds for short answers
-- Use normalization to reduce user frustration
-- Always test with real user input
+```js
+rate('stairway to heaven', 'stairway to heavon', { explain: true })
+// { score: 94, match: true, ... }
 
----
+rate('stairway to heaven', 'highway to hell', { explain: true })
+// { score: 52, match: false, ... }
+```
 
-## Key idea
-
-For quizzes:
-
-> Validate intent, not exact formatting.
-
-Guess‑Rater helps make quizzes fair and user‑friendly.
+→ [Explain mode](/guide/explain-mode) | [Thresholds guide](/guide/thresholds)

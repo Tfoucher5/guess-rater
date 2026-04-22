@@ -8,106 +8,104 @@ import { getTokenSortScore } from '../algorithms/tokenSort.js';
 import { getTokenSetScore } from '../algorithms/tokenSet.js';
 
 function stripWhitespace(str) {
-  return str.replace(/\s+/g, '');
+    return str.replace(/\s+/g, '');
 }
 
 function maxScoreWithSpaceInsensitive(left, right, enabled, scorer) {
-	const standardScore = scorer(left, right);
+    const standardScore = scorer(left, right);
 
-	if (!enabled) {
-			return { score: standardScore };
-	}
+    if (!enabled) {
+        return { score: standardScore };
+    }
 
-	const compactLeft = stripWhitespace(left);
-	const compactRight = stripWhitespace(right);
-	const compactScore = scorer(compactLeft, compactRight);
+    const compactLeft = stripWhitespace(left);
+    const compactRight = stripWhitespace(right);
+    const compactScore = scorer(compactLeft, compactRight);
 
-	if (compactScore >= standardScore) {
-			return {
-			score: compactScore,
-			details: {
-					enabled: true,
-					applied: true,
-					chosen: 'compact',
-					standardScore,
-					compactScore,
-					compactLeft,
-					compactRight
-			}
-			};
-	}
+    if (compactScore >= standardScore) {
+        return {
+            score: compactScore,
+            details: {
+                enabled: true,
+                applied: true,
+                chosen: 'compact',
+                standardScore,
+                compactScore,
+                compactLeft,
+                compactRight
+            }
+        };
+    }
 
-	return {
-			score: standardScore,
-			details: {
-			enabled: true,
-			applied: true,
-			chosen: 'standard',
-			standardScore,
-			compactScore,
-			compactLeft,
-			compactRight
-			}
-	};
+    return {
+        score: standardScore,
+        details: {
+            enabled: true,
+            applied: true,
+            chosen: 'standard',
+            standardScore,
+            compactScore,
+            compactLeft,
+            compactRight
+        }
+    };
 }
 
 function computeSingleAlgorithmScore(algorithm, left, right, options, spaceCollector) {
     switch (algorithm) {
-        
-		case 'levenshtein': {
-		const res = maxScoreWithSpaceInsensitive(
-			left,
-			right,
-			options.spaceInsensitive === true,
-			(a, b) => getLevenshteinScore(a, b)
-		);
+        case 'levenshtein': {
+            const res = maxScoreWithSpaceInsensitive(
+                left,
+                right,
+                options.spaceInsensitive === true,
+                (a, b) => getLevenshteinScore(a, b)
+            );
 
-		if (spaceCollector && res.details) {
-			spaceCollector.levenshtein = res.details;
-		} else if (spaceCollector && options.spaceInsensitive === true) {
-			spaceCollector.levenshtein = { enabled: true, applied: true, chosen: 'standard', standardScore: res.score, compactScore: res.score, compactLeft: stripWhitespace(left), compactRight: stripWhitespace(right) };
-		}
+            if (spaceCollector && res.details) {
+                spaceCollector.levenshtein = res.details;
+            } else if (spaceCollector && options.spaceInsensitive === true) {
+                spaceCollector.levenshtein = { enabled: true, applied: true, chosen: 'standard', standardScore: res.score, compactScore: res.score, compactLeft: stripWhitespace(left), compactRight: stripWhitespace(right) };
+            }
 
-		return res.score;
-		}
-
+            return res.score;
+        }
 
         case 'jaroWinkler': {
-		const res = maxScoreWithSpaceInsensitive(
-			left,
-			right,
-			options.spaceInsensitive === true,
-			(a, b) => getJaroWinklerScore(a, b, options.jaroWinkler)
-		);
+            const res = maxScoreWithSpaceInsensitive(
+                left,
+                right,
+                options.spaceInsensitive === true,
+                (a, b) => getJaroWinklerScore(a, b, options.jaroWinkler)
+            );
 
-		if (spaceCollector && res.details) {
-			spaceCollector.jaroWinkler = res.details;
-		}
+            if (spaceCollector && res.details) {
+                spaceCollector.jaroWinkler = res.details;
+            } else if (spaceCollector && options.spaceInsensitive === true) {
+                spaceCollector.jaroWinkler = { enabled: true, applied: true, chosen: 'standard', standardScore: res.score, compactScore: res.score, compactLeft: stripWhitespace(left), compactRight: stripWhitespace(right) };
+            }
 
-		return res.score;
-		}
+            return res.score;
+        }
 
-        
-		case 'tokenSort': {
-		if (spaceCollector && options.spaceInsensitive === true) {
-			spaceCollector.tokenSort = { enabled: true, applied: false, reason: 'token-based algorithm' };
-		}
-		return getTokenSortScore(
-		left, right, {
+        case 'tokenSort': {
+            if (spaceCollector && options.spaceInsensitive === true) {
+                spaceCollector.tokenSort = { enabled: true, applied: false, reason: 'token-based algorithm' };
+            }
+            return getTokenSortScore(left, right, {
                 ...options.tokenSort,
                 jaroWinkler: options.jaroWinkler
             });
-		}
+        }
 
         case 'tokenSet': {
-		if (spaceCollector && options.spaceInsensitive === true) {
-			spaceCollector.tokenSort = { enabled: true, applied: false, reason: 'token-based algorithm' };
-		}
-		return getTokenSetScore(left, right, {
-				...options.tokenSet,
-				jaroWinkler: options.jaroWinkler
-			});
-		}
+            if (spaceCollector && options.spaceInsensitive === true) {
+                spaceCollector.tokenSet = { enabled: true, applied: false, reason: 'token-based algorithm' };
+            }
+            return getTokenSetScore(left, right, {
+                ...options.tokenSet,
+                jaroWinkler: options.jaroWinkler
+            });
+        }
 
         default:
             throw new Error(`[guess-rater] Algorithme non géré : "${algorithm}".`);
@@ -164,7 +162,7 @@ export function rate(leftInput, rightInput, options = {}) {
 
     const normalizedLeft = normalize(leftInput, config.normalize);
     const normalizedRight = normalize(rightInput, config.normalize);
-	const spaceInsensitiveDetails = config.spaceInsensitive === true ? {} : null;
+    const spaceInsensitiveDetails = config.spaceInsensitive === true ? {} : null;
 
     let score;
     let breakdown;
@@ -179,7 +177,7 @@ export function rate(leftInput, rightInput, options = {}) {
             normalizedLeft,
             normalizedRight,
             config,
-			config.explain ? spaceInsensitiveDetails : null
+            config.explain ? spaceInsensitiveDetails : null
         );
     }
 
@@ -199,7 +197,7 @@ export function rate(leftInput, rightInput, options = {}) {
         details: {
             normalize: config.normalize,
             ...(breakdown ? { hybrid: breakdown } : {}),
-			...(spaceInsensitiveDetails ? { spaceInsensitive: spaceInsensitiveDetails } : {})
+            ...(spaceInsensitiveDetails ? { spaceInsensitive: spaceInsensitiveDetails } : {})
         }
     };
 }

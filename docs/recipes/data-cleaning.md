@@ -1,172 +1,117 @@
-# Data cleaning and deduplication
+# Recipe: Data cleaning & deduplication
 
-This recipe shows how to use Guess‑Rater for **data cleaning** and
-**duplicate detection**.
+## The challenge
 
-Real‑world datasets often contain:
-- inconsistent casing
-- punctuation differences
-- reordered words
-- partial values
-- near‑duplicates
+Raw datasets contain the same entity under different formats:
 
-Guess‑Rater helps normalize data and identify duplicates reliably.
-
----
-
-## Normalizing raw data
-
-Before matching, it is often useful to normalize data explicitly.
-
-```js
-import { normalize } from 'guess-rater'
-
-const rawValues = [
-  'The Quick-Brown Fox',
-  'quick brown fox',
-  'FOX, QUICK BROWN',
-  'Lazy Dog'
-]
-
-const normalizedValues = rawValues.map(value =>
-  normalize(value, {
-    removeWords: ['the'],
-    removePunctuation: true,
-    sortTokens: true
-  })
-)
-
-console.log(normalizedValues)
+```
+"Apple Inc."     vs  "APPLE INC"        → duplicate
+"Café de Paris"  vs  "cafe de paris"    → duplicate
+"Jean Dupont"    vs  "Dupont, Jean"     → duplicate
+"Samsung Galaxy" vs  "Galaxy Samsung"   → duplicate
 ```
 
-This produces a consistent representation for comparison or storage.
-
----
-
-## Detecting duplicates in a list
-
-You can compare each value against the rest of the dataset.
+## Recommended configuration
 
 ```js
-import { rankCandidates } from 'guess-rater'
-
-const values = [
-  'Quick Brown Fox',
-  'Brown Quick Fox',
-  'Lazy Dog'
-]
-
-const ranked = rankCandidates(
-  'Quick Brown Fox',
-  values,
-  {
-    algorithm: 'hybrid',
-    normalize: {
-      removePunctuation: true,
-      sortTokens: true
-    }
-  }
-)
-
-console.log(ranked)
-```
-
-Candidates with high scores are likely duplicates.
-
----
-
-## Filtering potential duplicates
-
-```js
-const duplicates = ranked.filter(item => item.score >= 90)
-console.log(duplicates)
-```
-
-Higher thresholds reduce false positives.
-
----
-
-## Finding the closest existing value
-
-```js
-import { findBestMatch } from 'guess-rater'
-
-const best = findBestMatch(
-  'quick brown fox',
-  [
-    'Quick Brown Fox',
-    'Lazy Dog',
-    'Slow Yellow Cat'
-  ],
-  {
-    algorithm: 'hybrid',
-    normalize: {
-      removePunctuation: true,
-      sortTokens: true
-    }
-  }
-)
-
-console.log(best)
-```
-
-This is useful when importing or merging datasets.
-
----
-
-## Using createMatcher for large datasets
-
-For repeated comparisons, reuse configuration.
-
-```js
-import { createMatcher } from 'guess-rater'
+import { createMatcher, normalize, rankCandidates } from 'guess-rater'
 
 const matcher = createMatcher({
   algorithm: 'hybrid',
-  threshold: 90,
   normalize: {
+    removeAccents: true,
     removePunctuation: true,
     sortTokens: true
-  }
+  },
+  threshold: 90    // strict — prefer false negatives over false positives
 })
-
-const isDuplicate = matcher.isMatch(
-  'Quick Brown Fox',
-  'Brown Quick Fox'
-)
-
-console.log(isDuplicate)
 ```
 
-This avoids re‑creating options for each comparison.
+**Why 90+?** Deduplication errors are costly. A false positive merges two different entities. Err on the side of caution.
 
----
+**Why sortTokens?** "Jean Dupont" and "Dupont Jean" are the same entity.
 
-## Recommended settings
+## Normalize first, compare second
 
-For data cleaning and deduplication:
+Pre-normalize your dataset once before comparison loops:
 
-- use `hybrid`
-- enable punctuation removal
-- enable token sorting
-- start with thresholds between `85–95`
+```js
+const normalized = rawData.map(item => ({
+  original: item,
+  normalized: normalize(item, {
+    removeAccents: true,
+    removePunctuation: true,
+    sortTokens: true
+  })
+}))
+```
 
-Always validate thresholds on real data.
+## Detect duplicates in a list
 
----
+```js
+function findDuplicates(items, threshold = 90) {
+  const duplicates = []
 
-## Notes
+  for (let i = 0; i < items.length; i++) {
+    const candidates = items.slice(i + 1)
+    const ranked = matcher.rankCandidates(items[i], candidates)
+    const matches = ranked.filter(r => r.score >= threshold)
 
-- Data cleaning is domain‑specific
-- Normalization rules should reflect business logic
-- Explain mode helps understand edge cases
+    if (matches.length > 0) {
+      duplicates.push({ source: items[i], matches: matches.map(m => m.value) })
+    }
+  }
 
----
+  return duplicates
+}
 
-## Key idea
+findDuplicates(['Apple Inc.', 'APPLE INC', 'Google', 'google LLC'])
+// [
+//   { source: 'Apple Inc.', matches: ['APPLE INC'] },
+//   { source: 'Google', matches: ['google LLC'] }
+// ]
+```
 
-For data cleaning:
+## Match incoming data to a reference list
 
-> Normalize first.  
-> Compare consistently.  
-> Decide duplicates with thresholds.
+When importing data, match each new entry to the existing canonical list:
+
+```js
+const canonicalList = ['Apple Inc.', 'Google LLC', 'Microsoft Corp.']
+
+function matchToCanonical(rawValue) {
+  const result = matcher.findBestMatch(rawValue, canonicalList)
+  if (result && result.score >= 90) {
+    return result.value  // known entity
+  }
+  return null  // new entity — add to canonical list
+}
+
+matchToCanonical('APPLE INC')   // 'Apple Inc.'
+matchToCanonical('apple inc.')  // 'Apple Inc.'
+matchToCanonical('Meta')        // null — not in list
+```
+
+## Investigate edge cases with explain mode
+
+When a match is unexpected, inspect the normalized forms:
+
+```js
+matcher.rate('Google', 'google LLC', { explain: true })
+// { score: 87, normalizedLeft: 'google', normalizedRight: 'google llc', ... }
+// → 'llc' is adding noise → add it to removeWords
+```
+
+```js
+const matcher = createMatcher({
+  algorithm: 'hybrid',
+  normalize: {
+    removeAccents: true,
+    removePunctuation: true,
+    sortTokens: true,
+    removeWords: ['inc', 'llc', 'corp', 'ltd', 'sa', 'sas']  // legal suffixes
+  }
+})
+```
+
+→ [Normalization guide](/guide/normalization) | [Explain mode](/guide/explain-mode) | [createMatcher](/guide/matcher)

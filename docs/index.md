@@ -3,29 +3,32 @@ layout: home
 
 hero:
   name: Guess‑Rater
-  text: Flexible fuzzy matching for JavaScript
-  tagline: Match strings even with typos, order changes, or formatting differences
+  text: Fuzzy string matching for JavaScript
+  tagline: Handles typos, word order, accents, punctuation — and tells you why.
   actions:
     - theme: brand
       text: Get Started
       link: /guide/installation
     - theme: alt
       text: API Reference
-      link: /api/rate
+      link: /api/exports
 
 features:
-  - title: 🧠 Tolerant matching
-    details: Handles typos, reordered words, punctuation, noise and casing differences.
+  - title: Five algorithms
+    details: Levenshtein, Jaro‑Winkler, Token Sort, Token Set, and Hybrid — pick the right tool or combine them all.
 
-  - title: 🧬 Normalization pipeline
-    details: Remove accents, stopwords or punctuation, and correct substrings before matching.
+  - title: Normalization pipeline
+    details: Remove accents, stop words, punctuation, and apply replacements before matching. Configurable per call.
 
-  - title: ⚖️ Hybrid scoring
-    details: Combine Levenshtein, Jaro‑Winkler and TokenSet with configurable weights.
+  - title: List helpers
+    details: rankCandidates, findBestMatch, filterMatches, extract — compare one input against a list in one line.
 
-  - title: 🚀 Ranking & batch matching
-    details: Find the closest match in a list or rank candidates automatically.
+  - title: Explain mode
+    details: Enable explain:true to see normalized strings, algorithm used, and per-algorithm scores in hybrid mode.
 
-  - title: 🛠 Reusable matcher instances
-    details: Preconfigure normalization and scoring once for repeated comparisons.
+  - title: TypeScript support
+    details: Full .d.ts declarations with overloads — explain:true changes the return type automatically in your IDE.
+
+  - title: Reusable matchers
+    details: createMatcher() preconfigures options once for consistent matching across a whole module or dataset.
 ---

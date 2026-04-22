@@ -1,182 +1,68 @@
 # Concepts
 
-Guess‑Rater is a **flexible, open‑source fuzzy matching engine**.
-
-It is designed to be:
-- easy to use
-- highly configurable
-- adaptable to many different use‑cases
-- extensible by the community
-
----
-
 ## The matching pipeline
 
-Guess‑Rater works as a **pipeline**.
-
-Every comparison follows these steps:
-
-1. **Normalization**
-2. **Algorithm comparison**
-3. **Score computation**
-4. **Threshold evaluation**
-5. *(optional)* Explain & ranking
-
-Understanding this pipeline is the key to using the library correctly.
-
----
-
-## 1. Normalization
-
-Before comparing two strings, Guess‑Rater can normalize them.
-
-Normalization reduces differences that usually do not matter, such as:
-
-- accents (`Molière` → `Moliere`)
-- punctuation (`SAINT-MICHEL.` → `SAINT MICHEL`)
-- casing (`Paris` vs `paris`)
-- word order (`Tower Eiffel` vs `Eiffel Tower`)
-- noise or typos (`bartndr` → `bartender`)
-
-Normalization is controlled with `options.normalize`.
-
-You decide what is important and what is not.
-
----
-
-## 2. Algorithm comparison
-
-After normalization, strings are compared using one algorithm:
-
-- `levenshtein`
-- `jaroWinkler`
-- `tokenSort`
-- `tokenSet`
-- `hybrid`
-
-Each algorithm measures similarity differently.
-
-There is **no single “best” algorithm**.
-The right choice depends entirely on your domain.
-
----
-
-## 3. Score computation
-
-The comparison produces a **score between 0 and 100**.
-
-- `0` means completely different
-- `100` means identical after normalization
-
-Example:
+Every call to `rate()`, `isMatch()`, or any list helper goes through the same pipeline:
 
 ```
-rate('Black Peugeot', 'Black Peugeot') → 100
-rate('Black Peugeot', 'Peugeot') → lower score
+Input strings
+    ↓
+1. Normalization   — remove noise (accents, casing, punctuation…)
+    ↓
+2. Algorithm       — measure character or token similarity
+    ↓
+3. Score (0–100)   — normalized to a common scale
+    ↓
+4. Threshold       — score ≥ threshold → match: true
+    ↓
+5. Output          — number, boolean, or explain object
 ```
 
-The score represents **how close the information is**, not how similar the formatting is.
+Each step is configurable and independent. You can normalize aggressively, pick a precise algorithm, set a strict threshold — or leave everything at defaults and get sensible results out of the box.
 
----
+## Score vs match
 
-## 4. Threshold and match
+`rate()` returns a **continuous score** (0–100). `isMatch()` converts it to a **boolean** using a threshold.
 
-A **threshold** defines when two strings are considered a match.
-
+```js
+rate('levenshtein', 'levenstein')    // 88   — a number
+isMatch('levenshtein', 'levenstein') // true  — score >= 80 (default threshold)
 ```
-match = score >= threshold
+
+Use the score when you need to rank or compare results. Use the boolean when you only care about yes/no.
+
+## Normalization is preprocessing
+
+Normalization runs **before** the algorithm. It removes formatting differences that aren't semantically meaningful — accents, casing, punctuation, stop words.
+
+```js
+// These all score 100 with default normalization:
+rate('Molière', 'moliere')
+rate('Saint-Nazaire', 'saint nazaire')
+rate('APPLE INC.', 'apple inc')
 ```
 
-- Default threshold: `80`
-- Higher threshold → stricter matching
-- Lower threshold → more tolerant matching
+The more consistent your normalization, the more predictable your scores. → [Normalization reference](/guide/normalization)
 
-This is what `isMatch()` does internally.
+## Algorithms measure different things
 
----
+| Question | Algorithm |
+|---|---|
+| How many edits to transform A into B? | `levenshtein` |
+| Do they share the same prefix / short form? | `jaroWinkler` |
+| Do they contain the same words (any order)? | `tokenSort` |
+| Does one contain the other's words? | `tokenSet` |
+| All of the above, weighted? | `hybrid` |
 
-## 5. Explain mode
+→ [Algorithm guide](/guide/algorithms)
 
-When `explain: true` is enabled, Guess‑Rater returns a detailed object:
+## Explain mode
 
-- final score
-- match boolean
-- normalized strings
-- algorithm breakdown (for hybrid)
+Add `explain: true` to any call to see the full breakdown: normalized strings, algorithm used, threshold evaluated, and per-algorithm scores in hybrid mode.
 
-Explain mode is meant for:
-- debugging
-- tuning thresholds
-- understanding *why* something matches or not
+```js
+rate('hello', 'helo', { explain: true })
+// { score: 88, match: true, threshold: 80, normalizedLeft: 'hello', ... }
+```
 
----
-
-## Score vs Match
-
-Important distinction:
-
-- **score** is continuous (0–100)
-- **match** is boolean (true / false)
-
-You should always tune your threshold based on your use‑case.
-
----
-
-## Designed to be generic
-
-Guess‑Rater does **not** enforce a specific domain.
-
-It can be used for:
-
-- person name matching
-- product title matching
-- fuzzy search
-- quiz answer validation
-- data cleaning and deduplication
-- tolerant user input validation
-
-And also for:
-- custom business rules
-- experimental matching strategies
-- domain‑specific heuristics
-
-You decide how strict or tolerant it should be.
-
----
-
-## Open‑source & contributions
-
-Guess‑Rater is an **open‑source project**.
-
-You are encouraged to:
-
-- use it freely in your own projects
-- adapt it to your needs
-- experiment with new ideas
-- propose improvements
-
-Contributions are welcome, including:
-
-- new algorithms
-- new normalization options
-- performance improvements
-- documentation improvements
-- new examples and recipes
-- bug fixes
-
-If something does not fit your use‑case, it is very likely intentional:
-the library is meant to be **extended**, not locked.
-
----
-
-## Mental model
-
-Think of Guess‑Rater as:
-
-> “Compare information content, not formatting.”
-
-Normalization removes noise.  
-Algorithms measure similarity.  
-Thresholds decide acceptance.
-
-Everything else is up to you.
+→ [Explain mode guide](/guide/explain-mode)

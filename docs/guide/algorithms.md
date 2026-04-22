@@ -1,228 +1,178 @@
 # Algorithms
 
-Guess‑Rater provides multiple string similarity algorithms.
+## Quick comparison
 
-Each algorithm answers a different question about similarity.
-There is no universally “best” algorithm — the right choice depends on your use‑case.
+| Algorithm | Best for | Sensitive to order? | Handles extra words? |
+|---|---|---|---|
+| `levenshtein` | Typos, short strings | Yes | No |
+| `jaroWinkler` | Names, short IDs | Yes | No |
+| `tokenSort` | Reordered words | No | Partially |
+| `tokenSet` | Extra / missing words | No | Yes |
+| `hybrid` | Mixed / unknown inputs | Balanced | Balanced |
 
----
-
-## Available algorithms
-
-You select the algorithm using `options.algorithm`.
-
-Supported values:
-
-- `levenshtein`
-- `jaroWinkler`
-- `tokenSort`
-- `tokenSet`
-- `hybrid`
-
-Example:
+Use the `algorithm` option on any scoring function:
 
 ```js
-rate('John Smith', 'Smith John', {
-  algorithm: 'tokenSort'
-})
+rate('John Smith', 'Smith John', { algorithm: 'tokenSort' }) // 100
 ```
 
 ---
 
 ## levenshtein
 
-Levenshtein measures **character‑level edit distance**.
+Counts the minimum number of character edits (insert, delete, replace) to transform one string into another. The score is normalized to 0–100.
 
-It answers:
-> “How many single‑character edits are required to transform one string into the other?”
-
-### Strengths
-- simple
-- predictable
-- good baseline
-
-### Weaknesses
-- sensitive to word order
-- sensitive to long strings
-
-### Example
+**Good for:** spelling mistakes, short strings, codes, identifiers.
 
 ```js
-rate('apple', 'appple', {
-  algorithm: 'levenshtein'
-})
-
-// score: 83.33
+rate('levenshtein', 'levenstein')  // ~88
+rate('color', 'colour')            // ~91
+rate('GOOG', 'GOOGL')              // ~88
 ```
 
-Good for:
-- typos
-- short strings
-- baseline comparison
+**Limitation:** word order matters — `"John Smith"` vs `"Smith John"` will score low.
 
 ---
 
 ## jaroWinkler
 
-Jaro‑Winkler focuses on **prefix similarity** and small transpositions.
+Measures character overlap and prefix similarity. Gives a bonus when strings share the same beginning, which makes it excellent for names.
 
-It answers:
-> “Do these strings look like the same name with small variations?”
-
-### Strengths
-- excellent for names
-- tolerant to small mistakes
-- good for short strings
-
-### Weaknesses
-- less suited for long phrases
-- not token‑aware
-
-### Example
+**Good for:** person names, usernames, short identifiers.
 
 ```js
-rate('Jonathan', 'Jonathon', {
-  algorithm: 'jaroWinkler'
-})
-
-// score: 95
+rate('Martha', 'Marhta', { algorithm: 'jaroWinkler' })  // ~94
+rate('Dixon', 'Dicksonx', { algorithm: 'jaroWinkler' })  // ~81
 ```
 
-Recommended for:
-- person names
-- usernames
-- short identifiers
+**Options:**
+
+| Option | Default | Description |
+|---|---|---|
+| `jaroWinkler.prefixScale` | `0.1` | Weight of the prefix bonus |
+| `jaroWinkler.maxPrefixLength` | `4` | Max prefix length considered |
 
 ---
 
 ## tokenSort
 
-TokenSort splits strings into words, sorts them alphabetically, then compares.
+Sorts tokens alphabetically before comparing. This makes word order irrelevant.
 
-It answers:
-> “Are the same words present, regardless of order?”
-
-### Strengths
-- ignores word order
-- very effective with names and titles
-
-### Weaknesses
-- extra or missing words affect the score
-- not ideal when order matters
-
-### Example
+**Good for:** names, product titles, addresses where word order varies.
 
 ```js
-rate('Smith John', 'John Smith', {
-  algorithm: 'tokenSort'
-})
-
-// score: 100
+rate('John Smith', 'Smith, John', { algorithm: 'tokenSort' })       // 100
+rate('peugeot 208 active', '208 peugeot active', { algorithm: 'tokenSort' }) // 100
 ```
 
-Recommended for:
-- names
-- product titles
-- addresses
+**Options:**
+
+| Option | Default | Description |
+|---|---|---|
+| `tokenSort.baseAlgorithm` | `'levenshtein'` | Algorithm used after token sorting |
 
 ---
 
 ## tokenSet
 
-TokenSet compares **shared tokens** and penalizes missing or extra words.
+Compares string pairs built from shared and unique tokens, then takes the best score. Extremely tolerant of extra or missing words.
 
-It answers:
-> “How much information do these strings share?”
-
-### Strengths
-- handles extra words well
-- tolerant to noise
-- good for fuzzy search
-
-### Weaknesses
-- less sensitive to exact ordering
-- may over‑match in some cases
-
-### Example
+**Good for:** product matching, fuzzy search, partial queries.
 
 ```js
-rate('Apple iPhone 13 Pro', 'iPhone 13', {
-  algorithm: 'tokenSet'
-})
-
-// score: 100
+rate('iphone 15 pro max 256gb', 'iPhone 15 Pro Max', { algorithm: 'tokenSet' })  // ~95
+rate('café de paris', 'le café de paris brasserie', { algorithm: 'tokenSet' })   // ~91
 ```
 
-Recommended for:
-- product matching
-- fuzzy catalog search
-- partial queries
+**Options:**
+
+| Option | Default | Description |
+|---|---|---|
+| `tokenSet.baseAlgorithm` | `'levenshtein'` | Algorithm used for token set comparison |
 
 ---
 
 ## hybrid
 
-Hybrid combines multiple algorithms using weighted scoring.
+Combines multiple algorithms with configurable weights. Use when inputs are inconsistent or when you want robustness without knowing which algorithm fits best.
 
-It answers:
-> “What is the best overall similarity across different strategies?”
-
-By default, hybrid uses:
-
-- Levenshtein
-- Jaro‑Winkler
-- TokenSet
-
-### Strengths
-- most robust option
-- balances strictness and tolerance
-- works well across domains
-
-### Weaknesses
-- slightly slower
-- requires tuning for specific domains
-
-### Example
+**Default weights:** `levenshtein: 0.4, jaroWinkler: 0.3, tokenSet: 0.3`
 
 ```js
-rate('John Smith', 'Smith J.', {
-  algorithm: 'hybrid'
-})
+// Default hybrid — no config needed
+rate('Jean-Baptiste Poquelin', 'jean baptiste poquelin', { algorithm: 'hybrid' }) // 100
 
-//   score: 48.29
+// Custom weights
+rate('iPhone 15 Pro', 'iphone 15 pro max', {
+  algorithm: 'hybrid',
+  hybrid: { tokenSort: 0.5, tokenSet: 0.5 }
+})
+```
+
+**Reading the hybrid explain output:**
+
+```js
+rate('hello world', 'helo world', {
+  algorithm: 'hybrid',
+  explain: true
+})
+// details.hybrid = {
+//   levenshtein: { score: 95, weight: 0.4 },
+//   jaroWinkler:  { score: 97, weight: 0.3 },
+//   tokenSet:     { score: 95, weight: 0.3 }
+// }
+```
+
+**Weight rules:**
+- Weights don't need to sum to 1 — they are normalized internally.
+- Any algorithm can be used as a sub-algorithm, except `hybrid` itself.
+- Omit an algorithm from the `hybrid` object to exclude it.
+
+**When to use hybrid:** mixed data sources, unknown input structure, general-purpose matching.
+
+**When NOT to use hybrid:** when you know exactly what you're comparing (e.g., only names → `jaroWinkler` is more predictable).
+
+→ [Explain mode](/guide/explain-mode) — inspect hybrid breakdown per sub-algorithm
+
+---
+
+## spaceInsensitive
+
+Available on all **character-based algorithms** (`levenshtein`, `jaroWinkler`). When enabled, Guess‑Rater runs an additional comparison with all whitespace removed from both strings, then keeps the best score.
+
+```js
+rate('stairwaytoheaven', 'stairway to heaven', {
+  algorithm: 'levenshtein',
+  spaceInsensitive: true
+}) // 100
+
+rate('nomoresorrow', 'no more sorrow', {
+  algorithm: 'jaroWinkler',
+  spaceInsensitive: true
+}) // 100
+```
+
+> Does **not** affect `tokenSort` or `tokenSet` — those already handle spaces through token splitting.
+
+When used with `explain: true`, the details include which pass was chosen and both scores:
+
+```js
+// details.spaceInsensitive = {
+//   levenshtein: { enabled: true, applied: true, chosen: 'compact', standardScore: 61, compactScore: 100, ... }
+// }
 ```
 
 ---
 
-## Choosing the right algorithm
+## Choosing an algorithm
 
-Quick guidelines:
+```
+Comparing short strings or codes?         → levenshtein
+Comparing names or usernames?             → jaroWinkler
+Word order might vary?                    → tokenSort
+Extra or missing words expected?          → tokenSet
+Mixed / inconsistent inputs?              → hybrid
+Strings may lack spaces between words?    → add spaceInsensitive: true
+```
 
-- Person names → `jaroWinkler` or `hybrid`
-- Product titles → `tokenSet` or `hybrid`
-- Reordered phrases → `tokenSort`
-- Simple typo detection → `levenshtein`
-- Unknown / mixed use‑cases → `hybrid`
-
----
-
-## Algorithm vs normalization
-
-Algorithms do not work alone.
-
-In practice:
-- normalization reduces noise
-- algorithms measure similarity
-
-The combination of both defines the final result.
-
----
-
-## Summary
-
-- Algorithms measure similarity
-- Normalization controls what differences matter
-- Hybrid is the safest default
-- Domain knowledge always wins
-
-Pick the algorithm that matches **your definition of similarity**.
+When in doubt, start with `hybrid` and use [explain mode](/guide/explain-mode) to understand the breakdown.

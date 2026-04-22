@@ -1,178 +1,128 @@
-# Ranking and batch matching
+# List helpers
 
-Guess‑Rater can compare **one input against many candidates**.
+Guess‑Rater provides four functions for comparing one input against a list of candidates. They all use the same scoring engine — the difference is in what they return.
 
-This is useful when you want to:
-- find the closest match in a list
-- rank multiple possibilities
-- validate user input against a dataset
+## Comparison at a glance
 
-Two helpers are provided:
-- `rankCandidates()`
-- `findBestMatch()`
+| Function | Returns all? | Filters by threshold? | Limits count? | Default return type |
+|---|---|---|---|---|
+| `rankCandidates()` | ✅ all, sorted | ❌ | ❌ | `{value, score, index}[]` |
+| `findBestMatch()` | ❌ top 1 only | ❌ | ✅ (1) | `{value, score, index} \| null` |
+| `filterMatches()` | ❌ above threshold | ✅ | ❌ | `string[]` |
+| `extract()` | ❌ above threshold | ✅ | ✅ configurable | `string[]` |
 
 ---
 
-## rankCandidates
+## rankCandidates()
 
-`rankCandidates()` compares one input string against a list of candidates
-and returns **all results sorted from best to worst**.
-
-### Basic usage
+Returns **all candidates**, sorted from best to worst score. No filtering.
 
 ```js
 import { rankCandidates } from 'guess-rater'
 
-const ranked = rankCandidates(
-  'john smith',
-  ['Smith J.', 'John Smyth', 'Alice Brown'],
-  {
-    algorithm: 'hybrid',
-    normalize: {
-      sortTokens: true
-    }
-  }
-)
-
-console.log(ranked)
+rankCandidates('moliere', ['Voltaire', 'Moliere', 'Victor Hugo'])
+// [
+//   { value: 'Moliere',    score: 100, index: 1 },
+//   { value: 'Victor Hugo', score: 22,  index: 2 },
+//   { value: 'Voltaire',   score: 17,  index: 0 }
+// ]
 ```
 
----
-
-## Returned structure
-
-Each ranked entry contains:
-
-- `value` — the candidate string
-- `score` — similarity score (0–100)
-- `index` — index of the candidate in the original array
-
-Example:
-
-```json
-{
-  value: 'John Smyth',
-  score: 91.4,
-  index: 1
-}
-```
-
----
-
-## Ranking with explain mode
-
-You can enable `explain: true` to get detailed information
-for each ranked candidate.
+Filter results yourself when needed:
 
 ```js
-import { rankCandidates } from 'guess-rater'
-
-const ranked = rankCandidates(
-  'john smith',
-  ['Smith J.', 'John Smyth', 'Alice Brown'],
-  {
-    algorithm: 'hybrid',
-    explain: true
-  }
-)
-
-console.log(ranked[0])
+const ranked = rankCandidates('iphone', candidates, { algorithm: 'tokenSet' })
+const good = ranked.filter(r => r.score >= 80)
 ```
 
-Each entry then includes:
-- normalized strings
-- match boolean
-- algorithm breakdown
+→ [rankCandidates() reference](/api/rankCandidates)
 
 ---
 
-## Filtering matches
+## findBestMatch()
 
-You can filter results using the score or match flag.
-
-```js
-const matches = ranked.filter(item => item.score >= 85)
-```
-
-or:
-
-```js
-const matches = ranked.filter(item => item.match)
-```
-
----
-
-## findBestMatch
-
-`findBestMatch()` is a shortcut built on top of `rankCandidates()`.
-
-It returns **only the best match** (or `null` if the list is empty).
-
-### Basic usage
+Returns the **single best candidate**, or `null` if the list is empty.
 
 ```js
 import { findBestMatch } from 'guess-rater'
 
-const best = findBestMatch(
-  'john smith',
-  ['Smith J.', 'John Smyth', 'Alice Brown'],
-  {
-    algorithm: 'hybrid',
-    normalize: {
-      sortTokens: true
-    }
-  }
-)
+findBestMatch('peugeot 208', ['Renault Clio', 'Peugeot 308', '208 Peugeot'], {
+  algorithm: 'tokenSort'
+})
+// { value: '208 Peugeot', score: 100, index: 2 }
 
-console.log(best)
+findBestMatch('anything', []) // null
 ```
 
+Equivalent to `rankCandidates()[0] ?? null` — use it when you only need the top result.
+
+→ [findBestMatch() reference](/api/findBestMatch)
+
 ---
 
-## Returned value
+## filterMatches()
 
-If a match is found:
+Returns **all candidates above the threshold**, without a count limit.
 
-```json
-{
-  value: 'John Smyth',
-  score: 91.4,
-  index: 1
-}
+```js
+import { filterMatches } from 'guess-rater'
+
+filterMatches('iPhone', ['iPhone 15', 'Samsung S24', 'iPhone 14 Pro'], { threshold: 70 })
+// ['iPhone 15', 'iPhone 14 Pro']
 ```
 
-If the candidates list is empty:
+Use `{ return: 'entries' }` to get the full objects instead of strings:
 
-```json
-null
+```js
+filterMatches('iPhone', candidates, { threshold: 70, return: 'entries' })
+// [{ value: 'iPhone 15', score: 91, index: 0 }, { value: 'iPhone 14 Pro', score: 84, index: 2 }]
 ```
 
----
-
-## Performance considerations
-
-Ranking performs **one comparison per candidate**.
-
-For large lists:
-- prefer `createMatcher()` to reuse configuration
-- consider pre‑normalizing static datasets
-- tune thresholds to reduce false positives
+→ [filterMatches() reference](/api/filterMatches)
 
 ---
 
-## Common use‑cases
+## extract()
 
-- fuzzy search suggestions
-- quiz answer validation
-- contact or customer deduplication
-- product matching
-- data reconciliation
+Like `filterMatches()`, but with a **count limit**. Returns the top N candidates above the threshold.
+
+```js
+import { extract } from 'guess-rater'
+
+extract('apple', ['Apple Watch', 'Apple TV', 'Samsung TV', 'iPad'], {
+  limit: 2,
+  threshold: 60
+})
+// ['Apple Watch', 'Apple TV']
+```
+
+Default: `limit: 5`, `threshold: 80`.
+
+→ [extract() reference](/api/extract)
 
 ---
 
-## Key idea
+## explain with list helpers
 
-`rankCandidates()` gives you visibility and control.  
-`findBestMatch()` gives you convenience.
+All four functions support `explain: true`. Each result then includes the full explain payload:
 
-Both are built on the same matching engine.
+```js
+rankCandidates('hello', ['hello', 'helo'], { explain: true })
+// [
+//   { value: 'hello', score: 100, index: 0, match: true, normalizedLeft: '...', details: {...} },
+//   { value: 'helo',  score: 88,  index: 1, match: true, ... }
+// ]
+```
+
+→ [Explain mode guide](/guide/explain-mode)
+
+---
+
+## Which one to use?
+
+```
+Need all scores for ranking/sorting?           → rankCandidates()
+Need only the single best result?              → findBestMatch()
+Need all good matches, no limit?               → filterMatches()
+Need top N good matches?                       → extract()
+```

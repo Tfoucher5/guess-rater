@@ -1,113 +1,59 @@
-<!-- FILE: docs/api/extract.md -->
-
 # extract()
 
-`extract()` compares one input string against a list of candidates and returns the **top matches**.
-
-It is effectively:
-
-> rank → filter (threshold) → limit (top N)
-
-Designed to be:
-- **simple by default** (returns `string[]`)
-- **detailed on demand** (entries + optional explain)
-
----
+Returns the **top N candidates** that score at or above the threshold. Combines filtering and limiting in one call.
 
 ## Signature
 
-    extract(input, candidates, options?)
+```ts
+// Default — returns string[]
+extract(input: string, candidates: string[], options?: RateOptions & { limit?: number; return?: 'values' }): string[]
 
----
+// Detailed — returns ranked objects
+extract(input: string, candidates: string[], options: RateOptions & { limit?: number; return: 'entries' }): RankedCandidate[]
+extract(input: string, candidates: string[], options: RateOptions & { limit?: number; return: 'entries'; explain: true }): RankedCandidateExplain[]
+```
 
-## Basic usage (default: values only)
-
-By default, it returns a `string[]` containing only the top matching values.
+## Usage
 
 ```js
 import { extract } from 'guess-rater'
 
-const results = extract('hello', ['hello', 'world'], {
-  threshold: 90,
-  limit: 3
-})
+// Default: top 5, threshold 80, returns string[]
+extract('apple', ['Apple Watch', 'Apple TV', 'Samsung TV', 'iPad'])
+// ['Apple Watch', 'Apple TV']
 
-console.log(results) // ['hello']
+// Custom limit and threshold
+extract('apple', candidates, { limit: 2, threshold: 60 })
+// ['Apple Watch', 'Apple TV']
+
+// Detailed objects
+extract('apple', candidates, { return: 'entries', limit: 3 })
+// [{ value: 'Apple Watch', score: 91, index: 0 }, ...]
+
+// With explain
+extract('apple', candidates, { return: 'entries', explain: true })
 ```
 
----
+> `explain` is only applied when `return: 'entries'`.
 
 ## Options
 
-### limit
+| Option | Default | Description |
+|---|---|---|
+| `limit` | `5` | Maximum number of results |
+| `threshold` | `80` | Minimum score to include |
+| `return` | `'values'` | `'values'` → `string[]`, `'entries'` → `{value, score, index}[]` |
+| `explain` | `false` | Include explain payload (requires `return: 'entries'`) |
+| + all [rate() options](/api/rate#options) | | |
 
-Maximum number of results to return.
+## Pipeline
 
-- default: `5`
-
-```js
-extract('query', candidates, { limit: 10 })
+```
+rankCandidates()  →  filter(score >= threshold)  →  slice(0, limit)
 ```
 
----
+## See also
 
-### threshold
-
-Minimum score required for a candidate to be included.
-
-- default: `80`
-
-```js
-extract('query', candidates, { threshold: 85 })
-```
-
----
-
-### return
-
-Controls the shape of the return value.
-
-- `'values'` (default): returns `string[]`
-- `'entries'`: returns ranked objects `{ value, score, index }`
-
-```js
-const values = extract('hello', ['hello', 'world'])
-// values: string[]
-
-const entries = extract('hello', ['hello', 'world'], { return: 'entries' })
-// entries: { value, score, index }[]
-```
-
----
-
-### explain
-
-`explain: true` is only applied when `return: 'entries'`.
-
-- If `return` is `'values'` (default), `explain` is ignored.
-
-```js
-const entries = extract('hello', ['hello', 'world'], {
-  return: 'entries',
-  explain: true
-})
-```
-
-Each entry then contains the same explain fields as `rate()` (in addition to `value` and `index`).
-
----
-
-## Relationship with other helpers
-
-- Use `rankCandidates()` when you want **all candidates sorted**
-- Use `filterMatches()` when you want **all matches above a threshold**
-- Use `extract()` when you want **top N matches above a threshold**
-- Use `findBestMatch()` when you want **a single best match**
-
----
-
-## Key idea
-
-`extract()` is the “top N” helper for list matching:
-
-> rank → filter → take the first N
+- [List helpers comparison](/guide/ranking)
+- [filterMatches()](/api/filterMatches) — same without the count limit
+- [findBestMatch()](/api/findBestMatch) — single best result

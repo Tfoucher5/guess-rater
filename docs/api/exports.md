@@ -1,126 +1,55 @@
-<!-- FILE: docs/api/exports.md -->
-
 # API exports
 
-This page lists **all public exports** of the Guess‑Rater package.
-
-All functions are **named exports** and can be imported individually.
-
----
-
-## Available exports
-
-Guess‑Rater exports the following functions:
-
-- `rate`
-- `isMatch`
-- `normalize`
-- `rankCandidates`
-- `findBestMatch`
-- `filterMatches`
-- `extract`
-- `createMatcher`
-
-Example import:
+All exports are **named** — no default export. ESM only.
 
 ```js
-import {
-  rate,
-  isMatch,
-  normalize,
-  rankCandidates,
-  findBestMatch,
-  filterMatches,
-  createMatcher
-} from 'guess-rater'
+import { rate, isMatch, findBestMatch, filterMatches, extract, createMatcher, normalize } from 'guess-rater'
 ```
 
 ---
 
-## Aliasing imports
+## Main functions
 
-You can rename imports locally to better match your domain.
+| Function | Description |
+|---|---|
+| [`rate()`](/api/rate) | Similarity score between two strings (0–100) |
+| [`isMatch()`](/api/isMatch) | Boolean — score meets threshold? |
+| [`normalize()`](/api/normalize) | Apply normalization pipeline without scoring |
+| [`rankCandidates()`](/api/rankCandidates) | Rank all candidates, best first |
+| [`findBestMatch()`](/api/findBestMatch) | Return single best candidate |
+| [`filterMatches()`](/api/filterMatches) | Return all candidates above threshold |
+| [`extract()`](/api/extract) | Return top N candidates above threshold |
+| [`createMatcher()`](/api/createMatcher) | Preconfigured matcher instance |
 
-```js
-import {
-  rate as similarityScore,
-  isMatch as fuzzyEquals
-} from 'guess-rater'
-```
+### List helpers comparison
 
-This does not change the library behavior — it only affects your local code.
+| Function | All? | Filtered? | Limited? | Default return |
+|---|---|---|---|---|
+| `rankCandidates()` | ✅ | ❌ | ❌ | `{value, score, index}[]` |
+| `findBestMatch()` | ❌ | ❌ | top 1 | `{value, score, index} \| null` |
+| `filterMatches()` | ❌ | ✅ | ❌ | `string[]` |
+| `extract()` | ❌ | ✅ | ✅ | `string[]` |
 
----
-
-## Default export
-
-Guess‑Rater does **not** provide a default export.
-
-Incorrect:
-
-```js
-import rate from 'guess-rater'
-```
-
-Correct:
-
-```js
-import { rate } from 'guess-rater'
-```
+→ [List helpers guide](/guide/ranking)
 
 ---
 
-## ESM only
+## Aliases
 
-Guess‑Rater is ESM‑first.
-
-You must use:
-- `.mjs` files
-- or `"type": "module"` in your `package.json`
+`getSimilarityScore` is an alias for `rate()`.
+`normalizeString` is an alias for `normalize()`.
 
 ---
 
-## Low‑level algorithm helpers
+## Low-level algorithm helpers
 
-Some internal helpers may also be exported for advanced usage:
+Exposed for advanced use cases. Most users don't need these directly.
 
-- `getLevenshteinDistance`
-- `getLevenshteinScore`
-- `getJaroScore`
-- `getJaroWinklerScore`
-- `getTokenSortScore`
-- `getTokenSetScore`
-
-These are intended for:
-- experimentation
-- benchmarks
-- custom matching strategies
-
-Most users should rely on `rate()` and list helpers instead.
-
----
-
-## Recommended usage
-
-For most use‑cases:
-
-- use `rate()` for scoring
-- use `isMatch()` for validation
-- use `findBestMatch()` for single best result
-- use `rankCandidates()` for full rankings
-- use `filterMatches()` to keep only matches above a threshold
-- use `createMatcher()` for repeated comparisons
-
----
-
-## Key idea
-
-The API is intentionally small.
-
-Power comes from **composition**:
-- normalization
-- algorithms
-- thresholds
-- hybrid weights
-
-Rather than from many specialized functions.
+| Function | Description |
+|---|---|
+| `getLevenshteinDistance(a, b)` | Raw edit distance (integer) |
+| `getLevenshteinScore(a, b)` | Normalized score (0–100) |
+| `getJaroScore(a, b)` | Jaro similarity (0–100) |
+| `getJaroWinklerScore(a, b, options?)` | Jaro-Winkler similarity (0–100) |
+| `getTokenSortScore(a, b, options?)` | Token-sort similarity (0–100) |
+| `getTokenSetScore(a, b, options?)` | Token-set similarity (0–100) |

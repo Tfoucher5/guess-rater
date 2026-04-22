@@ -1,140 +1,91 @@
-# Product title matching
+# Recipe: Product title matching
 
-This recipe shows how to match **product titles** in a tolerant way.
+## The challenge
 
-Product titles often vary because of:
-- word order
-- extra or missing words
-- punctuation
-- casing
-- partial queries
+Product titles vary in word order, extra descriptors, punctuation, and missing or added model details:
 
-Guess‑Rater handles these variations well when configured properly.
-
----
-
-## Basic example
-
-```js
-import { rate } from 'guess-rater'
-
-const score = rate('Apple iPhone 13 Pro', 'iPhone 13')
-console.log(score)
 ```
-
-Without normalization, extra words may reduce the score.
-
----
+"iPhone 15 Pro Max 256GB"  vs  "Apple iPhone 15 Pro Max"  → same product
+"Peugeot 208 Active"       vs  "208 Peugeot"              → same
+"Samsung Galaxy S24 Ultra" vs  "Galaxy S24 Ultra 256Go"   → same
+```
 
 ## Recommended configuration
 
-For product titles, use:
+```js
+import { rate, findBestMatch, filterMatches, extract, createMatcher } from 'guess-rater'
 
-- punctuation removal
-- token sorting
-- token‑aware algorithms
-- hybrid or tokenSet
+const config = {
+  algorithm: 'tokenSet',    // tolerates extra/missing words
+  normalize: {
+    removePunctuation: true,
+    removeAccents: true,
+    removeWords: ['the', 'a', 'an', 'le', 'la', 'les']
+  },
+  threshold: 78
+}
+```
+
+**Why tokenSet?** Product catalogs often have extra words (brand names, capacities, colors). tokenSet compares shared tokens and ignores extras.
+
+**Why 78?** Lower than person names because product titles naturally have more variation between legitimate matches.
+
+## Usage
 
 ```js
-import { rate } from 'guess-rater'
+// Find best matching product
+findBestMatch('iphone 15', [
+  'Samsung Galaxy S24',
+  'Apple iPhone 15 Pro',
+  'iPhone 15 Plus 128GB'
+], config)
+// { value: 'Apple iPhone 15 Pro', score: 91, index: 1 }
 
-const score = rate('Apple iPhone 13 Pro', 'iPhone 13', {
+// Get all good matches above threshold
+filterMatches('peugeot 208', [
+  '208 Peugeot Active',
+  'Peugeot 308 GTi',
+  'Renault Clio',
+  'Peugeot 208 Style'
+], config)
+// ['208 Peugeot Active', 'Peugeot 208 Style']
+
+// Extract top 3 results for a search bar
+extract(userQuery, productCatalog, { ...config, limit: 3 })
+```
+
+## Handling word-order variations
+
+Use `tokenSort` if your titles differ mainly in word order:
+
+```js
+rate('Peugeot 208 Active', '208 Active Peugeot', { algorithm: 'tokenSort' }) // 100
+```
+
+Use `hybrid` when you have both word-order and extra-word issues:
+
+```js
+const config = {
   algorithm: 'hybrid',
-  normalize: {
-    removePunctuation: true,
-    sortTokens: true
-  }
-})
-
-console.log(score)
+  hybrid: { tokenSort: 0.4, tokenSet: 0.6 }
+}
 ```
 
-This treats both inputs as describing the same product.
-
----
-
-## Handling extra words
-
-Product titles often include marketing terms or variants.
+## Building a search function
 
 ```js
-rate('Samsung Galaxy S21 Ultra 5G', 'Galaxy S21', {
+const matcher = createMatcher({
   algorithm: 'tokenSet',
-  normalize: {
-    removePunctuation: true,
-    sortTokens: true
-  }
+  normalize: { removePunctuation: true, removeAccents: true },
+  threshold: 75
 })
+
+function searchProducts(query, catalog) {
+  return matcher.extract(query, catalog, { limit: 5, return: 'entries' })
+}
+
+searchProducts('iphone 15', productCatalog)
+// [{ value: 'iPhone 15 Pro', score: 91, index: 4 }, ...]
 ```
 
-`tokenSet` handles extra words better than strict algorithms.
-
----
-
-## Handling reordered words
-
-```js
-rate('Wireless Mouse Logitech', 'Logitech Wireless Mouse', {
-  algorithm: 'tokenSort',
-  normalize: {
-    removePunctuation: true,
-    sortTokens: true
-  }
-})
-```
-
-Word order becomes irrelevant.
-
----
-
-## Finding the best product match
-
-```js
-import { findBestMatch } from 'guess-rater'
-
-const best = findBestMatch(
-  'iphone 13',
-  [
-    'Apple iPhone 12',
-    'Apple iPhone 13 Pro',
-    'Samsung Galaxy S21'
-  ],
-  {
-    algorithm: 'hybrid',
-    normalize: {
-      removePunctuation: true,
-      sortTokens: true
-    }
-  }
-)
-
-console.log(best)
-```
-
----
-
-## Threshold recommendation
-
-For product titles:
-
-- start around `75–85`
-- lower thresholds allow partial matches
-- higher thresholds reduce false positives
-
----
-
-## Notes
-
-- Token‑based algorithms are usually more reliable than character‑only ones
-- Hybrid works well when product data is inconsistent
-- Normalization matters more than the algorithm itself
-
----
-
-## Key idea
-
-For product titles:
-
-> Compare shared information, not exact wording.
-
-Extra words should not prevent a match.
+→ [Algorithms guide](/guide/algorithms) | [List helpers](/guide/ranking)

@@ -9,6 +9,31 @@ The project follows **semantic versioning**:
 
 ---
 
+## v1.5.0
+
+### Added
+- `filterMatches()` and `extract()` are now accessible on `createMatcher()` instances
+  - `matcher.filterMatches(input, candidates, options?)`
+  - `matcher.extract(input, candidates, options?)`
+
+### Fixed
+- **`spaceInsensitive` explain in hybrid mode** — when using `hybrid` with both `tokenSort` and `tokenSet` sub-algorithms and `explain: true`, the `spaceInsensitive` payload was writing the `tokenSet` entry under the wrong key (`tokenSort`), causing `tokenSet` to be missing and `tokenSort` to be overwritten. Both keys are now correctly populated.
+
+### Improved
+- **Documentation overhaul** — complete rewrite of all guide and API pages:
+  - No repeated option descriptions — API pages link to canonical guide sections
+  - New [List helpers](/guide/ranking) guide with comparison table for `rankCandidates`, `findBestMatch`, `filterMatches`, `extract`
+  - Hybrid algorithm documentation merged into the [Algorithms guide](/guide/algorithms)
+  - All recipe pages rewritten with real examples and cross-links
+  - Explain mode, normalization, algorithms and threshold guides significantly improved
+- Test structure: `spaceInsensitive` tests were incorrectly nested inside a parent test — moved to top level for proper isolation
+
+### Notes
+- No breaking changes
+- Backward compatible
+
+---
+
 ## v1.4.0
 
 ### Added

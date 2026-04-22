@@ -370,6 +370,15 @@ export interface Matcher {
   ): RankedCandidate | RankedCandidateExplain | null;
 
   /**
+   * Filters candidates above a threshold.
+   */
+  filterMatches(
+    input: string,
+    candidates: string[],
+    options?: RateOptions
+  ): RankedCandidate[] | RankedCandidateExplain[] | string[];
+
+  /**
    * Extracts top matches (rank + filter + limit).
    */
   extract(

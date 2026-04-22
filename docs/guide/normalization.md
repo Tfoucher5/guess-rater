@@ -1,284 +1,165 @@
 # Normalization
 
-Normalization is the most important part of Guess‑Rater.
-
-It allows you to remove noise and formatting differences **before** comparing strings.
-
-You decide what matters and what does not.
-
----
-
-## Why normalization exists
-
-Most matching problems are not caused by wrong information, but by differences such as:
-
-- accents
-- punctuation
-- casing
-- word order
-- extra words
-- typos or abbreviations
-
-Normalization solves this **before** any algorithm is applied.
-
----
-
-## The normalize option
-
-Normalization is configured using `options.normalize`.
-
-Example:
+Normalization runs **before** any scoring algorithm. It removes formatting noise so that semantically identical strings match regardless of their presentation.
 
 ```js
-import { rate } from 'guess-rater'
-
-rate('The Quick-Brown Fox', 'quick brown fox', {
-  normalize: {
-    removeWords: ['the'],
-    removePunctuation: true,
-    sortTokens: true
-  }
-})
+// All of these score 100 with default normalization:
+rate('Molière', 'moliere')
+rate('Saint-Nazaire', 'saint nazaire')
+rate('APPLE INC.', 'apple inc')
 ```
+
+Normalization is controlled by the `normalize` option, available on all scoring functions:
+
+```js
+rate(a, b, { normalize: { ... } })
+isMatch(a, b, { normalize: { ... } })
+```
+
+---
+
+## Options reference
+
+| Option | Type | Default | Effect |
+|---|---|---|---|
+| `caseSensitive` | `boolean` | `false` | Keep original casing |
+| `removeAccents` | `boolean` | `true` | `é→e`, `ç→c`, `ô→o` |
+| `removePunctuation` | `boolean` | `true` | Remove punctuation |
+| `punctuationStrategy` | `'space' \| 'remove'` | `'space'` | Replace with space or delete |
+| `trim` | `boolean` | `true` | Remove leading/trailing whitespace |
+| `collapseWhitespace` | `boolean` | `true` | Collapse multiple spaces |
+| `replacements` | `Record<string, string>` | `{}` | Substitute substrings before matching |
+| `removeWords` | `string[]` | `[]` | Remove stop words entirely |
+| `sortTokens` | `boolean` | `false` | Sort words alphabetically (order-agnostic) |
 
 ---
 
 ## caseSensitive
 
-Controls whether letter casing matters.
-
-- default: `false`
+Default: `false` — strings are lowercased before comparison.
 
 ```js
-normalize: {
-  caseSensitive: false
-}
+rate('Hello', 'hello')                                   // 100
+rate('Hello', 'hello', { normalize: { caseSensitive: true } }) // lower score
 ```
 
-When `false`:
-```
-Hello == hello == HELLO
-```
-
-When `true`:
-```
-Hello != hello != HELLO
-```
-
----
+Only disable the default if case is semantically meaningful (e.g., code identifiers).
 
 ## removeAccents
 
-Removes diacritics.
-
-- default: `true`
+Default: `true` — diacritics are stripped.
 
 ```js
-normalize: {
-  removeAccents: true
-}
+rate('Héloïse', 'heloise') // 100
+rate('Ångström', 'angstrom') // 100
 ```
 
-Examples:
-```
-é → e
-ç → c
-ô → o
-```
+## removePunctuation / punctuationStrategy
 
----
-
-## removePunctuation
-
-Removes punctuation characters.
-
-- default: `true`
+Default: remove punctuation, replacing it with a space.
 
 ```js
-normalize: {
-  removePunctuation: true
-}
+rate('Saint-Nazaire', 'saint nazaire') // 100  (hyphen → space)
+rate('hello, world!', 'hello world')   // 100
 ```
 
-Examples:
-```
-HELLO-WORLD → HELLO WORLD
-foo/bar → foo bar
-```
+`punctuationStrategy: 'remove'` deletes punctuation entirely (no space replacement). Prefer `'space'` for natural language — it preserves word boundaries.
 
----
+## trim / collapseWhitespace
 
-## punctuationStrategy
-
-Controls how punctuation is handled.
-
-- `"space"` (default)
-- `"remove"`
+Enabled by default. Strips outer whitespace and collapses runs of spaces.
 
 ```js
-normalize: {
-  punctuationStrategy: 'space'
-}
+rate('  hello   world  ', 'hello world') // 100
 ```
-
-Use `"space"` to keep word boundaries.
-Use `"remove"` when punctuation should disappear completely.
-
----
-
-## trim
-
-Removes leading and trailing whitespace.
-
-- default: `true`
-
-```js
-normalize: {
-  trim: true
-}
-```
-
----
-
-## collapseWhitespace
-
-Collapses multiple spaces into a single space.
-
-- default: `true`
-
-```js
-normalize: {
-  collapseWhitespace: true
-}
-```
-
----
 
 ## replacements
 
-Replace substrings before matching.
-
-Useful for:
-- abbreviations
-- common typos
-- domain-specific rules
+Substitutes substrings before scoring. Useful for abbreviations, aliases, or known typos.
 
 ```js
-normalize: {
-  replacements: {
-    nyc: 'new york city',
-    appple: 'apple'
-  }
-}
+rate('J. Smith', 'John Smith', {
+  normalize: { replacements: { 'j.': 'john', 'j ': 'john ' } }
+}) // 100
+
+rate('NYC', 'New York City', {
+  normalize: { replacements: { nyc: 'new york city' } }
+}) // 100
 ```
 
-Replacements are applied **before** comparison.
-
----
+Replacements are case-insensitive after the initial lowercasing step.
 
 ## removeWords
 
-Removes specific words completely.
-
-Useful for:
-- articles
-- stop words
-- noise words
+Removes specific words from both strings before scoring. Useful for stop words or noise tokens.
 
 ```js
-normalize: {
+rate('le café de paris', 'café de paris', {
+  normalize: { removeWords: ['le', 'la', 'les', 'de'] }
+}) // 100
+```
+
+## sortTokens
+
+Sorts all words alphabetically before comparing. Makes word order irrelevant without switching algorithm.
+
+```js
+rate('Jean Paul Dupont', 'Dupont Jean Paul', {
+  normalize: { sortTokens: true }
+}) // 100
+```
+
+This is similar to the `tokenSort` algorithm, but applied at the normalization level — available to any algorithm including `hybrid`.
+
+---
+
+## Common presets
+
+**Person names**
+```js
+{
+  removeAccents: true,
+  removePunctuation: true,
+  sortTokens: true
+}
+```
+
+**Product titles**
+```js
+{
+  removePunctuation: true,
+  collapseWhitespace: true,
   removeWords: ['the', 'a', 'an']
 }
 ```
 
-Example:
-```
-"the quick brown fox" → "quick brown fox"
-```
-
----
-
-## sortTokens
-
-Sorts words alphabetically.
-
-- default: `false`
-
+**Strict identifiers** (codes, references)
 ```js
-normalize: {
-  sortTokens: true
-}
-```
-
-This makes word order irrelevant.
-
-Examples:
-```
-"John Smith" == "Smith John"
-"iPhone 14 Pro" == "Pro iPhone 14"
-```
-
-Use it for:
-- names
-- products
-- cities
-- addresses
-
-Avoid it for:
-- IDs
-- codes
-- sentences where order matters
-
----
-
-## Missing / extra spaces
-
-If your inputs may contain missing or extra spaces (e.g. `iphone14pro` vs `iphone 14 pro`),
-see the `spaceInsensitive` option (a scoring feature, not a normalization option):
-
-- See: [spaceInsensitive Option](/api/rate#spaceinsensitive)
-
-
----
-
-## Typical normalization presets
-
-### Names
-
-```js
-normalize: {
-  removeAccents: true,
-  removePunctuation: true,
-  sortTokens: true
-}
-```
-
-### Products
-
-```js
-normalize: {
-  removeAccents: true,
-  removePunctuation: true,
-  sortTokens: true
-}
-```
-
-### Strict identifiers
-
-```js
-normalize: {
+{
   caseSensitive: true,
-  removePunctuation: false,
-  sortTokens: false
+  removeAccents: false,
+  removePunctuation: false
 }
 ```
 
 ---
 
-## Key idea
+## Using normalize() standalone
 
-Normalization is not “right” or “wrong”.
+To inspect normalization output or pre-clean data:
 
-It is **a tool**.
+```js
+import { normalize } from 'guess-rater'
 
-You control how strict or tolerant the matching should be.
+normalize('Héloïse Saint-Exupéry')
+// 'heloise saint exupery'
+
+normalize('  APPLE INC.  ', { removePunctuation: true, collapseWhitespace: true })
+// 'apple inc'
+```
+
+→ [normalize() reference](/api/normalize)
+
+---
+
+> **Normalization is not "right" or "wrong".** It reflects your domain's definition of equivalence. Always test on real data.

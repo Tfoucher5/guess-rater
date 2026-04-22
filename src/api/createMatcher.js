@@ -1,7 +1,9 @@
 import { DEFAULT_RATE_OPTIONS } from '../core/defaults.js';
 import { deepMerge } from '../core/helpers.js';
 import { normalize } from '../normalize/normalize.js';
+import { extract } from './extract.js';
 import { findBestMatch } from './findBestMatch.js';
+import { filterMatches } from './filterMatches.js';
 import { isMatch } from './isMatch.js';
 import { rankCandidates } from './rankCandidates.js';
 import { rate } from './rate.js';
@@ -39,6 +41,14 @@ export function createMatcher(baseOptions = {}) {
 
         findBestMatch(input, candidates, options = {}) {
         return findBestMatch(input, candidates, deepMerge(resolvedBaseOptions, options));
+        },
+
+        filterMatches(input, candidates, options = {}) {
+        return filterMatches(input, candidates, deepMerge(resolvedBaseOptions, options));
+        },
+
+        extract(input, candidates, options = {}) {
+        return extract(input, candidates, deepMerge(resolvedBaseOptions, options));
         },
 
         normalize(input, normalizeOptions = {}) {

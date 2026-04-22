@@ -1,138 +1,49 @@
-<!-- FILE: docs/api/filterMatches.md -->
-
 # filterMatches()
 
-filter a list of candidates and keeps only the items that score **at or above a threshold**.
-
-It is designed to be:
-
-- **simple by default** (returns `string[]`)
-- **more detailed on demand** (return ranked entries, optionally with `explain`)
-
----
+Returns all candidates that score **at or above the threshold**. No count limit.
 
 ## Signature
 
-```js
-filterMatches(input, candidates, options?)
+```ts
+// Default — returns string[]
+filterMatches(input: string, candidates: string[], options?: RateOptions & { return?: 'values' }): string[]
+
+// Detailed — returns ranked objects
+filterMatches(input: string, candidates: string[], options: RateOptions & { return: 'entries' }): RankedCandidate[]
+filterMatches(input: string, candidates: string[], options: RateOptions & { return: 'entries'; explain: true }): RankedCandidateExplain[]
 ```
 
----
-
-## Basic usage (default: values only)
-
-By default, it returns a `string[]` containing only the matching candidate values.
+## Usage
 
 ```js
 import { filterMatches } from 'guess-rater'
 
-const results = filterMatches('hello', ['hello', 'world'], {
-    threshold: 90
-})
+// Default: string[]
+filterMatches('iPhone', ['iPhone 15', 'Samsung S24', 'iPhone 14 Pro'], { threshold: 70 })
+// ['iPhone 15', 'iPhone 14 Pro']
 
-console.log(results) // ['hello']
+// Detailed objects
+filterMatches('iPhone', candidates, { threshold: 70, return: 'entries' })
+// [{ value: 'iPhone 15', score: 91, index: 0 }, { value: 'iPhone 14 Pro', score: 84, index: 2 }]
+
+// With explain
+filterMatches('iPhone', candidates, { threshold: 70, return: 'entries', explain: true })
+// Each entry includes the full explain payload
 ```
 
----
+> `explain` is only applied when `return: 'entries'` — it is ignored in values mode.
 
 ## Options
 
-### threshold
+| Option | Default | Description |
+|---|---|---|
+| `threshold` | `80` | Minimum score to include |
+| `return` | `'values'` | `'values'` → `string[]`, `'entries'` → `{value, score, index}[]` |
+| `explain` | `false` | Include explain payload (requires `return: 'entries'`) |
+| + all [rate() options](/api/rate#options) | | |
 
-Minimum score required for a candidate to be included.
+## See also
 
-- default: `80`
-
-    filterMatches('query', candidates, { threshold: 85 })
-
----
-
-### return
-
-Controls the shape of the return value.
-
-- `'values'` (default): returns `string[]`
-- `'entries'`: returns ranked objects `{ value, score, index }`
-
-    const values = filterMatches('hello', ['hello', 'world'])
-    // values: string[]
-
-    const entries = filterMatches('hello', ['hello', 'world'], { return: 'entries' })
-    // entries: { value, score, index }[]
-
----
-
-### explain
-
-`explain: true` is only applied when `return: 'entries'`.
-
-- If `return` is `'values'` (default), `explain` is ignored.
-
-    const entries = filterMatches('hello', ['hello', 'world'], {
-      return: 'entries',
-      explain: true
-    })
-
-Each entry then contains the same explain fields as `rate()` (in addition to `value` and `index`).
-
----
-
-## Return values
-
-### Default (`return: 'values'`)
-
-Returns:
-
-```js
-string[]
-```
-
----
-
-### Detailed (`return: 'entries'`)
-
-Returns:
-
-```
-Array<{ value: string, score: number, index: number }>
-```
-
----
-
-### Detailed + explain (`return: 'entries', explain: true`)
-
-Returns:
-
-```
-Array<{
-    value: string,
-    index: number,
-    score: number,
-    match: boolean,
-    threshold: number,
-    algorithm: string,
-    input: string,
-    target: string,
-    normalizedLeft: string,
-    normalizedRight: string,
-    details: object
-}>
-```
-
----
-
-## Relationship with other helpers
-
-- Use `rankCandidates()` when you need **all candidates sorted** by score
-- Use `findBestMatch()` when you need **only the top result**
-- Use `filterMatches()` when you need **only candidates above a threshold**
-
----
-
-## Key idea
-
-`filterMatches()` is the “pandas-like” helper for string matching:
-
-> rank → filter → (optionally) inspect details
-
-
+- [List helpers comparison](/guide/ranking)
+- [extract()](/api/extract) — same as filterMatches but with a count limit
+- [rankCandidates()](/api/rankCandidates) — all candidates, no threshold filter

@@ -1,158 +1,112 @@
 # createMatcher
 
-`createMatcher()` allows you to create a **pre‑configured matcher instance**.
+`createMatcher()` preconfigures a set of options once and returns a matcher object with all the same methods as the top-level API.
 
-Instead of passing the same options on every call, you configure them once
-and reuse the matcher for multiple comparisons.
-
----
-
-## Why use createMatcher?
-
-Use `createMatcher()` when:
-
-- you apply the same normalization repeatedly
-- you use the same algorithm and threshold
-- you compare many strings in a loop
-- you want cleaner, more readable code
-
-It improves:
-- performance
-- readability
-- developer experience
-
----
-
-## Creating a matcher
+Use it when you repeat the same configuration across multiple calls.
 
 ```js
 import { createMatcher } from 'guess-rater'
 
 const matcher = createMatcher({
   algorithm: 'hybrid',
-  threshold: 85,
-  normalize: {
-    removeAccents: true,
-    removePunctuation: true,
-    sortTokens: true
-  }
+  normalize: { removeAccents: true, sortTokens: true },
+  threshold: 85
 })
 ```
 
-`createMatcher()` returns an object with several methods.
-
 ---
 
-## matcher.rate()
+## Methods
 
-Compute a similarity score using the preconfigured options.
+All methods accept the same options as their top-level counterparts. Options are **merged** with the base configuration — call-level options take precedence.
 
-```
-const score = matcher.rate('John Smith', 'Smith John')
-console.log(score)
-```
+### matcher.rate(left, right, options?)
 
-If `explain: true` was configured, this returns an explain object.
-
----
-
-## matcher.isMatch()
-
-Check if two strings match using the configured threshold.
+Returns a score (or explain object).
 
 ```js
-const ok = matcher.isMatch('John Smith', 'Smith John')
-console.log(ok)
+matcher.rate('Jean-Paul', 'jean paul')        // 100
+matcher.rate('Jean-Paul', 'jean paul', { explain: true })
 ```
 
-This is equivalent to calling `rate()` and comparing with the threshold.
+### matcher.isMatch(left, right, thresholdOrOptions?)
+
+```js
+matcher.isMatch('Café de Paris', 'cafe de paris') // true
+matcher.isMatch('hello', 'world', 95)              // false
+```
+
+### matcher.findBestMatch(input, candidates, options?)
+
+```js
+matcher.findBestMatch('peugeot', ['Renault', 'Peugeot 208', 'BMW'])
+// { value: 'Peugeot 208', score: ..., index: 1 }
+```
+
+### matcher.rankCandidates(input, candidates, options?)
+
+```js
+matcher.rankCandidates('iphone', ['iPhone 15', 'Samsung S24', 'iPhone 14'])
+// [{ value: 'iPhone 15', score: ..., index: 0 }, ...]
+```
+
+### matcher.filterMatches(input, candidates, options?)
+
+```js
+matcher.filterMatches('iphone', ['iPhone 15', 'Samsung S24', 'iPhone 14'])
+// ['iPhone 15', 'iPhone 14']
+```
+
+### matcher.extract(input, candidates, options?)
+
+```js
+matcher.extract('apple', ['Apple Watch', 'Apple TV', 'Samsung', 'iPad'], { limit: 2 })
+// ['Apple Watch', 'Apple TV']
+```
+
+### matcher.normalize(input, options?)
+
+```js
+matcher.normalize('Héloïse Saint-Exupéry')
+// 'heloise saint exupery'  (uses base normalization options)
+```
 
 ---
 
-## matcher.findBestMatch()
+## Overriding options per call
 
-Find the closest match in a list.
-
-```js
-const best = matcher.findBestMatch(
-  'john smith',
-  ['Smith J.', 'John Smyth', 'Alice Brown']
-)
-
-console.log(best)
-```
-
-The returned object contains:
-- `value`
-- `score`
-- `index`
-
----
-
-## matcher.rankCandidates()
-
-Rank all candidates by similarity score.
+Options passed at call time are merged on top of the base config:
 
 ```js
-const ranked = matcher.rankCandidates(
-  'john smith',
-  ['Smith J.', 'John Smyth', 'Alice Brown']
-)
+const matcher = createMatcher({ algorithm: 'levenshtein', threshold: 80 })
 
-console.log(ranked)
+// Override algorithm for this call only:
+matcher.rate('Smith John', 'John Smith', { algorithm: 'tokenSort' })
 ```
-
-Candidates are sorted from best to worst.
-
----
-
-## matcher.normalize()
-
-Apply only the normalization pipeline.
-
-```js
-const normalized = matcher.normalize('THEO-FOUCHER')
-console.log(normalized)
-```
-
-Useful for:
-- debugging
-- preprocessing
-- data cleaning
 
 ---
 
 ## Common mistake
 
-`createMatcher()` does **not** compare strings.
-
-Incorrect usage:
+`createMatcher()` takes **options**, not strings:
 
 ```js
-createMatcher('a', 'b', options)
-```
+// Wrong
+const m = createMatcher('hello', 'world', { algorithm: 'hybrid' })
 
-Correct usage:
-
-```js
-const matcher = createMatcher(options)
-matcher.rate('a', 'b')
+// Correct
+const m = createMatcher({ algorithm: 'hybrid' })
+m.rate('hello', 'world')
 ```
 
 ---
 
-## When not to use createMatcher
+## When to use createMatcher
 
-If you only perform one comparison, using `rate()` directly is simpler.
+- Comparing many strings with the same configuration
+- Building a reusable service or class method around Guess‑Rater
+- Ensuring consistency across a module (same normalization everywhere)
 
-`createMatcher()` is most useful when the same configuration
-is reused multiple times.
+**When not to use it:** one-off comparisons — just call `rate()` directly.
 
----
-
-## Key idea
-
-`createMatcher()` turns Guess‑Rater into a reusable matching engine.
-
-Configure once.  
-Match many times.
+→ [createMatcher() API reference](/api/createMatcher)

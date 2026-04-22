@@ -1,16 +1,14 @@
-// FILE: docs/.vitepress/config.ts
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Guess‑Rater',
-  description: 'Flexible fuzzy matching for JavaScript',
+  description: 'Fuzzy string matching for JavaScript',
 
-  // IMPORTANT for GitHub Pages (repo: guess-rater)
   base: '/guess-rater/',
 
   themeConfig: {
     nav: [
-      { text: 'Guide', link: '/guide/installation' },
+      { text: 'Guide', link: '/guide/quickstart' },
       { text: 'API', link: '/api/exports' },
       { text: 'Recipes', link: '/recipes/person-name' }
     ],
@@ -22,13 +20,12 @@ export default defineConfig({
           { text: 'Installation', link: '/guide/installation' },
           { text: 'Quickstart', link: '/guide/quickstart' },
           { text: 'Concepts', link: '/guide/concepts' },
-          { text: 'Normalization', link: '/guide/normalization' },
           { text: 'Algorithms', link: '/guide/algorithms' },
-          { text: 'Hybrid Scoring', link: '/guide/hybrid' },
+          { text: 'Normalization', link: '/guide/normalization' },
           { text: 'Thresholds', link: '/guide/thresholds' },
-          { text: 'Explain Mode', link: '/guide/explain-mode' },
+          { text: 'Explain mode', link: '/guide/explain-mode' },
+          { text: 'List helpers', link: '/guide/ranking' },
           { text: 'createMatcher', link: '/guide/matcher' },
-          { text: 'Ranking', link: '/guide/ranking' },
           { text: 'Types & Autocomplete', link: '/guide/types-autocomplete' },
           { text: 'Troubleshooting', link: '/guide/troubleshooting' },
           { text: 'Changelog', link: '/guide/changelog' }
@@ -37,7 +34,7 @@ export default defineConfig({
       {
         text: 'API Reference',
         items: [
-          { text: 'Exports', link: '/api/exports' },
+          { text: 'All exports', link: '/api/exports' },
           { text: 'rate()', link: '/api/rate' },
           { text: 'isMatch()', link: '/api/isMatch' },
           { text: 'normalize()', link: '/api/normalize' },
@@ -57,6 +54,10 @@ export default defineConfig({
           { text: 'Data cleaning & dedupe', link: '/recipes/data-cleaning' }
         ]
       }
-    ]
+    ],
+
+    search: {
+      provider: 'local'
+    }
   }
 })

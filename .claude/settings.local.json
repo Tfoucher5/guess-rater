@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(git merge --no-ff fix/optimisations -m ' *)",
-      "Bash(gh release create v1.1.2 --title v1.1.2 --notes ' *)"
+      "Bash(gh release create v1.1.2 --title v1.1.2 --notes ' *)",
+      "Bash(awk '{print $1}')",
+      "Bash(npm test *)"
     ]
   }
 }

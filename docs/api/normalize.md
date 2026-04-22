@@ -1,126 +1,57 @@
 # normalize()
 
-`normalize()` applies the normalization pipeline **without computing any score**.
-
-It is useful when you want to clean or standardize text using the same rules
-that are used internally by `rate()` and other helpers.
-
----
+Applies the normalization pipeline to a string **without computing any score**. Returns the cleaned string.
 
 ## Signature
 
-```js
-normalize(input, options?)
+```ts
+normalize(input: string, options?: NormalizeOptions): string
 ```
 
----
-
-## Basic usage
+## Usage
 
 ```js
 import { normalize } from 'guess-rater'
 
-const result = normalize('HELLO, WORLD!')
-console.log(result)
+normalize('Héloïse Saint-Exupéry')
+// 'heloise saint exupery'
+
+normalize('  APPLE INC.  ')
+// 'apple inc'
+
+normalize('John-Paul Smith', { sortTokens: true })
+// 'john paul smith'  (sorted: john paul smith → john paul smith)
 ```
 
----
+Returns an empty string if the input is not a string.
 
-## Using normalization options
+## Options
 
-You can pass the same normalization options used by `rate()`.
+All normalization options are described in the [Normalization guide](/guide/normalization).
+
+## Use cases
+
+- **Inspect transformations** during development
+- **Pre-normalize** a dataset once before looping comparisons
+- **Store normalized values** to avoid repeated computation
+- **Build custom matching logic** using the same normalization as `rate()`
+
+## Example: normalize before bulk comparison
 
 ```js
-import { normalize } from 'guess-rater'
+const normalizedCatalog = catalog.map(title => normalize(title))
 
-const result = normalize('The Quick-Brown Fox', {
-  removeWords: ['the'],
-  removePunctuation: true,
-  sortTokens: true
-})
-
-console.log(result)
+for (const input of userInputs) {
+  const normalizedInput = normalize(input)
+  // compare normalizedInput against normalizedCatalog with a custom scorer
+}
 ```
 
----
+## Alias
 
-## Returned value
+`normalizeString()` is an alias for `normalize()`.
 
-`normalize()` always returns a **string**.
+## See also
 
-If the input is not a string, it returns an empty string.
-
-```
-normalize(null)      → ""
-normalize(undefined) → ""
-```
-
----
-
-## What normalize() does NOT do
-
-`normalize()` does **not**:
-
-- compute a similarity score
-- apply an algorithm
-- evaluate a threshold
-- return explain details
-
-It only performs **text preprocessing**.
-
----
-
-## Typical use-cases
-
-Use `normalize()` when you want to:
-
-- inspect how inputs are transformed
-- debug normalization behavior
-- pre-clean datasets
-- store normalized values
-- reduce repeated normalization costs
-- build your own matching logic
-
----
-
-## Example: dataset preprocessing
-
-```js
-import { normalize } from 'guess-rater'
-
-const rawValues = [
-  'Hello, World!',
-  'world hello',
-  'The-World: Hello'
-]
-
-const normalizedValues = rawValues.map(value =>
-  normalize(value, {
-    removeWords: ['the'],
-    removePunctuation: true,
-    sortTokens: true
-  })
-)
-
-console.log(normalizedValues)
-```
-
----
-
-## Relationship with rate()
-
-Internally, `rate()` calls `normalize()` before comparing strings.
-
-Using `normalize()` directly allows you to:
-
-- understand the normalization pipeline
-- reuse normalized values
-- avoid recomputing normalization multiple times
-
----
-
-## Key idea
-
-`normalize()` exposes the **first stage** of the Guess-Rater pipeline.
-
-It is especially useful for data cleaning, preprocessing, and debugging.
+- [Normalization guide](/guide/normalization) — all options explained
+- [rate()](/api/rate) — applies normalization internally before scoring
