@@ -450,6 +450,32 @@ export function findBestMatch(
 ): RankedCandidateExplain | null;
 
 /**
+ * Filters candidates above a threshold.
+ *
+ * Default: returns string[] (values only)
+ * Use { return: 'entries' } for detailed results.
+ *
+ * Note: explain is only applied when return: 'entries'.
+ */
+export function filterMatches(
+  input: string,
+  candidates: string[],
+  options?: (RateOptions & { return?: 'values'; explain?: boolean })
+): string[];
+
+export function filterMatches(
+  input: string,
+  candidates: string[],
+  options: (RateOptions & { return: 'entries'; explain?: false })
+): RankedCandidate[];
+
+export function filterMatches(
+  input: string,
+  candidates: string[],
+  options: (RateOptions & { return: 'entries'; explain: true })
+): RankedCandidateExplain[];
+
+/**
  * Normalizes input text (pure preprocessing).
  */
 export function normalize(

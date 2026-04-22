@@ -1,10 +1,12 @@
+// FILE: docs/.vitepress/config.ts
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  base: '/guess-rater/',
-  
   title: 'Guess‑Rater',
   description: 'Flexible fuzzy matching for JavaScript',
+
+  // IMPORTANT for GitHub Pages (repo: guess-rater)
+  base: '/guess-rater/',
 
   themeConfig: {
     nav: [
@@ -41,6 +43,7 @@ export default defineConfig({
           { text: 'normalize()', link: '/api/normalize' },
           { text: 'rankCandidates()', link: '/api/rankCandidates' },
           { text: 'findBestMatch()', link: '/api/findBestMatch' },
+          { text: 'filterMatches()', link: '/api/filterMatches' },
           { text: 'createMatcher()', link: '/api/createMatcher' }
         ]
       },

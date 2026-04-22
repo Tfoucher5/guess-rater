@@ -1,3 +1,5 @@
+<!-- FILE: docs/api/exports.md -->
+
 # API exports
 
 This page lists **all public exports** of the Guess‑Rater package.
@@ -15,6 +17,7 @@ Guess‑Rater exports the following functions:
 - `normalize`
 - `rankCandidates`
 - `findBestMatch`
+- `filterMatches`
 - `createMatcher`
 
 Example import:
@@ -26,6 +29,7 @@ import {
   normalize,
   rankCandidates,
   findBestMatch,
+  filterMatches,
   createMatcher
 } from 'guess-rater'
 ```
@@ -91,7 +95,7 @@ These are intended for:
 - benchmarks
 - custom matching strategies
 
-Most users should rely on `rate()` instead.
+Most users should rely on `rate()` and list helpers instead.
 
 ---
 
@@ -103,6 +107,7 @@ For most use‑cases:
 - use `isMatch()` for validation
 - use `findBestMatch()` for single best result
 - use `rankCandidates()` for full rankings
+- use `filterMatches()` to keep only matches above a threshold
 - use `createMatcher()` for repeated comparisons
 
 ---
