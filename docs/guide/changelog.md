@@ -9,6 +9,23 @@ The project follows **semantic versioning**:
 
 ---
 
+## v1.4.0
+
+### Added
+- New list helper: `extract()`
+  - returns top N matches from a candidate list
+  - default return is `string[]` (values only)
+  - optional `return: 'entries'` for detailed results (`{ value, score, index }`)
+  - optional `explain: true` when using `return: 'entries'`
+  - supports `limit` (default 5) and `threshold` (default 80)
+
+### Notes
+- No breaking changes
+- Backward compatible
+- Feature release focused on list extraction (top matches)
+
+---
+
 ## v1.3.0
 
 ### Added

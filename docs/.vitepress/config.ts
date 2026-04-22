@@ -44,6 +44,7 @@ export default defineConfig({
           { text: 'rankCandidates()', link: '/api/rankCandidates' },
           { text: 'findBestMatch()', link: '/api/findBestMatch' },
           { text: 'filterMatches()', link: '/api/filterMatches' },
+          { text: 'extract()', link: '/api/extract' },
           { text: 'createMatcher()', link: '/api/createMatcher' }
         ]
       },
