@@ -1,7 +1,7 @@
 {
   "name": "guess-rater",
   "version": "2.0.0",
-  "description": "Fuzzy string matching that just works: typo-tolerant scores, answer checking for quizzes, search-as-you-type and dedupe. Fast, zero dependencies, fully typed.",
+  "description": "Fuzzy string matching that just works: answer checking for quizzes, search-as-you-type, did-you-mean, fuzzy find and highlight, dedupe. Fast, zero dependencies, fully typed.",
   "keywords": [
     "fuzzy",
     "fuzzy-matching",
@@ -18,7 +18,11 @@
     "answer-checking",
     "dedupe",
     "normalize",
-    "typescript"
+    "typescript",
+    "highlight",
+    "fuzzy-find",
+    "spell-check",
+    "did-you-mean"
   ],
   "license": "MIT",
   "author": "Theo Foucher",
@@ -64,7 +68,8 @@
     "prepublishOnly": "npm test",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "bench:real": "npm run build && node bench/real-data.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

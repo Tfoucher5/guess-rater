@@ -32,6 +32,8 @@ Scores go from **0** (nothing in common) to **100** (identical once normalized).
 | Filter a list as the user types | [`search()` / `createIndex()`](/recipes/search) |
 | Suggest a correction | [`closest()`](/recipes/did-you-mean) |
 | Merge duplicates in a dataset | [`dedupe()` / `group()`](/recipes/data-cleaning) |
+| Spot a title or a name inside a sentence | [`find()`](/recipes/find-in-text) |
+| Highlight what matched in a result | [`highlight()`](/recipes/search#highlight-what-matched) |
 | Know how similar two texts are | `similarity()`, `isMatch()` |
 | Understand a score | `compare()` |
 
@@ -60,6 +62,7 @@ search('queen', songs, { keys: ['title', 'artist', 'aliases'] }) // ✅
 search('queen', songs, { keys: (song) => `${song.title} ${song.artist}` }) // ✅
 search('queen', songs) // ❌ keys is required for objects
 search('queen', songs, { keys: ['year'] }) // ❌ year is not text
+search('queen', songs, { keys: ['title', { name: 'artist', weight: 0.8 }] }) // ✅ artist counts less
 ```
 
 Each result is a `Match`: `{ item, score, index, text }`, where `text` is the value that produced the score.

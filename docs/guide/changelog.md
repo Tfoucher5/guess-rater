@@ -17,6 +17,9 @@ A rewrite focused on doing the right thing by default. See [Upgrading from v1](/
 - `check()`: grades a guess as `correct`, `close` or `wrong` against one or several answers.
 - `search()`, `closest()`, `dedupe()` and `group()`, working with strings or objects (`keys`).
 - `createIndex()`: pre-processes a list once for fast repeated searches.
+- `find()`: fuzzy occurrences of a query inside a longer text, with positions.
+- `highlight()`: splits a text into matching and non-matching pieces for display.
+- Weighted keys: `keys: ['title', { name: 'artist', weight: 0.8 }]`.
 - `compare()`: normalized texts and the score of each strategy.
 - Presets: `music`, `search`, `strict`.
 - `strip` rules: `featuring`, `version`, `brackets`, `articles`.

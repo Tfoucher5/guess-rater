@@ -1,4 +1,6 @@
 import {
+  bagDistance,
+  bagMissingLetters,
   damerau,
   jaroWinkler,
   levenshtein,
@@ -160,8 +162,10 @@ function tokenSet(a: Prepared, b: Prepared): number {
 function partialScore(short: Prepared, long: Prepared, floor: number): number {
   const s = short.text;
   const l = long.text;
-  // A part never scores as high as the whole: weigh by how much is covered.
+  // A part never scores as high as the whole: weigh by how much is covered,
+  // with a bonus when it is the start of the text (what autocomplete expects).
   const coverage = 100 * (0.85 + (0.15 * s.length) / l.length);
+  const startCoverage = 100 * (0.9 + (0.1 * s.length) / l.length);
   const multiWord = short.words.length > 1;
 
   const wholeBound = 1 - searchDistance(s, l) / s.length;
@@ -175,9 +179,10 @@ function partialScore(short: Prepared, long: Prepared, floor: number): number {
     }
     wordsBound = 1 - distance / letters;
   }
-  if (Math.max(wholeBound, wordsBound) * coverage <= floor) return -1;
+  if (Math.max(wholeBound * startCoverage, wordsBound * coverage) <= floor) return -1;
 
   let best = wholeBound > 0 ? 1 - partialDistance(s, l) / s.length : 0;
+  const fromStart = wholeBound > 0 ? (1 - prefixDistance(s, l) / s.length) * startCoverage : 0;
 
   // Several words: each one may match the start of any word, in any order.
   if (multiWord && best < 1 && wordsBound > best) {
@@ -195,7 +200,7 @@ function partialScore(short: Prepared, long: Prepared, floor: number): number {
     best = Math.max(best, 1 - distance / letters);
   }
 
-  return Math.max(0, best) * coverage;
+  return Math.max(0, best * coverage, fromStart);
 }
 
 type Scores = Comparison['scores'];
@@ -207,6 +212,7 @@ export function scorePrepared(
   engine: Engine,
   scores?: Scores,
   floor = 0,
+  queryFirst = false,
 ): number {
   const { algorithm } = engine.options;
   if (a.text === b.text) {
@@ -230,7 +236,7 @@ export function scorePrepared(
     case 'tokenSet':
       return record(scores, algorithm, tokenSet(a, b));
     default:
-      return smart(a, b, engine.options, scores, floor);
+      return smart(a, b, engine.options, scores, floor, queryFirst);
   }
 }
 
@@ -240,7 +246,20 @@ function record(scores: Scores | undefined, key: keyof Scores, value: number): n
   return rounded;
 }
 
-function smart(a: Prepared, b: Prepared, options: ResolvedOptions, scores: Scores | undefined, floor: number): number {
+function smart(
+  a: Prepared,
+  b: Prepared,
+  options: ResolvedOptions,
+  scores: Scores | undefined,
+  floor: number,
+  queryFirst: boolean,
+): number {
+  // In a search, only the query may be the partial side: "i don" finds
+  // "I Don't Care", but "I Do" is not a match for "i don".
+  const partial = options.partial && (queryFirst ? a.text.length < b.text.length : a.text.length !== b.text.length);
+  // In lists, most candidates are far off: rule them out with cheap bounds.
+  if (floor > 0 && !scores && !canReach(a, b, options, partial, floor - 0.01)) return 0;
+
   let best = record(scores, 'characters', ratio(damerau(a.text, b.text), a.text, b.text));
   const multiWord = a.words.length > 1 || b.words.length > 1;
   // A strategy is only worth running if its length bound can beat both.
@@ -256,7 +275,7 @@ function smart(a: Prepared, b: Prepared, options: ResolvedOptions, scores: Score
     const value = record(scores, 'spaces', ratio(damerau(a.compact, b.compact), a.compact, b.compact));
     if (value > best) best = value;
   }
-  if (best < 100 && options.partial && a.text.length !== b.text.length) {
+  if (best < 100 && partial) {
     const [short, long] = a.text.length < b.text.length ? [a, b] : [b, a];
     const value = partialScore(short, long, Math.max(best, floor - 0.01));
     if (value >= 0) {
@@ -265,6 +284,72 @@ function smart(a: Prepared, b: Prepared, options: ResolvedOptions, scores: Score
     }
   }
   return best;
+}
+
+/**
+ * Lower bounds of `searchDistance` computed once on a text that contains all
+ * the candidate texts (an item's joined keys). -1 when unknown.
+ */
+const hint = { whole: -1, words: -1 };
+
+/** Sets {@link hint} for the next comparisons; call `clearSearchHint()` after. */
+export function setSearchHint(query: Prepared, container: Prepared): void {
+  hint.whole = searchDistance(query.text, container.text);
+  hint.words = -1;
+  if (query.words.length > 1) {
+    let distance = 0;
+    for (const word of query.words) distance += searchDistance(word, container.text);
+    hint.words = distance;
+  }
+}
+
+export function clearSearchHint(): void {
+  hint.whole = -1;
+  hint.words = -1;
+}
+
+/**
+ * Whether the `smart` score could reach `floor`, judging from lengths,
+ * character counts and one bit-parallel scan, cheapest checks first.
+ */
+function canReach(a: Prepared, b: Prepared, options: ResolvedOptions, partial: boolean, floor: number): boolean {
+  const swap = a.text.length > b.text.length;
+  const short = swap ? b : a;
+  const long = swap ? a : b;
+  const s = short.text.length;
+  const l = long.text.length;
+
+  const byLength = lengthBound(s, l);
+  const byCompact = options.ignoreSpaces ? lengthBound(a.compact.length, b.compact.length) : 0;
+  if (Math.max(byLength, byCompact) >= floor) {
+    const missing = bagDistance(a.text, b.text);
+    if ((1 - Math.max(missing, l - s) / l) * 100 >= floor) return true;
+    if (options.ignoreSpaces) {
+      const cmax = Math.max(a.compact.length, b.compact.length, 1);
+      const cdiff = Math.abs(a.compact.length - b.compact.length);
+      if ((1 - Math.max(bagMissingLetters(), cdiff) / cmax) * 100 >= floor) return true;
+    }
+  }
+  if (!partial) return false;
+
+  const coverage = 100 * (0.85 + (0.15 * s) / l);
+  const startCoverage = 100 * (0.9 + (0.1 * s) / l);
+  if (startCoverage < floor) return false;
+  const known = short === a ? hint : null;
+  if (
+    (!known || known.whole < 0 || (1 - known.whole / s) * startCoverage >= floor) &&
+    (1 - searchDistance(short.text, long.text) / s) * startCoverage >= floor
+  ) {
+    return true;
+  }
+  if (short.words.length > 1) {
+    const letters = s - short.words.length + 1;
+    if (known && known.words >= 0 && (1 - known.words / letters) * coverage < floor) return false;
+    let distance = 0;
+    for (const word of short.words) distance += searchDistance(word, long.text);
+    if ((1 - distance / (s - short.words.length + 1)) * coverage >= floor) return true;
+  }
+  return false;
 }
 
 function lengthBound(x: number, y: number): number {

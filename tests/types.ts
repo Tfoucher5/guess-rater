@@ -55,3 +55,8 @@ const index = createIndex(songs, { keys: ['title', 'artist'], preset: 'search' }
 const first: Song | undefined = index.closest('bohemian')?.item;
 
 export { s1, s2, s3, verdict, result, m1, deduped, first };
+
+// Weighted keys
+search('queen', songs, { keys: ['title', { name: 'artist', weight: 0.8 }] });
+// @ts-expect-error weighted key must name a text property
+search('queen', songs, { keys: [{ name: 'year', weight: 1 }] });

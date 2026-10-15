@@ -3,12 +3,16 @@ import {
   getEngine,
   maxPossibleScore,
   prepare,
+  roundScore,
   scorePrepared,
+  setSearchHint,
+  clearSearchHint,
   type Engine,
   type Prepared,
   type ResolvedOptions,
 } from './engine.js';
 import { partialDistance } from './distance.js';
+import { findIn, highlightIn, type Found, type Segment } from './text.js';
 import type {
   CheckOptions,
   CheckResult,
@@ -88,6 +92,10 @@ export interface Matcher {
   dedupe<T>(items: readonly T[], ...args: ItemsArgs<T, Pick<MatcherListOptions<T>, 'threshold' | 'keys'>>): T[];
   /** Groups near-duplicates together. Groups keep the original order. */
   group<T>(items: readonly T[], ...args: ItemsArgs<T, Pick<MatcherListOptions<T>, 'threshold' | 'keys'>>): T[][];
+  /** Fuzzy occurrences of `query` inside a longer `text`, with their positions. */
+  find(text: string, query: string, options?: { threshold?: number }): Found[];
+  /** Splits `text` into pieces, marking the ones that match `query`. */
+  highlight(text: string, query: string): Segment[];
   /** Pre-processes a list once, to search it many times. */
   index<T>(items: readonly T[], ...args: ItemsArgs<T, Pick<MatcherListOptions<T>, 'keys'>>): Index<T>;
 }
@@ -96,14 +104,30 @@ interface Entry<T> {
   item: T;
   index: number;
   texts: readonly string[];
+  weights: readonly number[];
   prepared: readonly Prepared[];
+  /** Whether the last prepared text joins all the others. */
+  joined: boolean;
+}
+
+interface ItemTexts {
+  texts: string[];
+  weights: number[];
 }
 
 function toText(value: unknown): string {
   return value == null ? '' : String(value);
 }
 
-function textGetter<T>(keys: KeysOption<T> | undefined): (item: T) => readonly string[] {
+function pushTexts(out: ItemTexts, value: unknown, weight: number): void {
+  if (Array.isArray(value)) for (const v of value) pushTexts(out, v, weight);
+  else if (value != null && value !== '') {
+    out.texts.push(toText(value));
+    out.weights.push(weight);
+  }
+}
+
+function textGetter<T>(keys: KeysOption<T> | undefined): (item: T) => ItemTexts {
   if (keys === undefined) {
     return (item) => {
       if (item !== null && typeof item === 'object') {
@@ -111,24 +135,26 @@ function textGetter<T>(keys: KeysOption<T> | undefined): (item: T) => readonly s
           '[guess-rater] Items are objects: pass `keys` to say where their text is, e.g. { keys: ["title"] }.',
         );
       }
-      return [toText(item)];
+      return { texts: [toText(item)], weights: [1] };
     };
   }
   if (typeof keys === 'function') {
     return (item) => {
-      const value = keys(item);
-      return Array.isArray(value) ? value.map(toText) : [toText(value)];
+      const out: ItemTexts = { texts: [], weights: [] };
+      pushTexts(out, keys(item), 1);
+      return out;
     };
   }
-  const list: readonly string[] = typeof keys === 'string' ? [keys] : (keys as readonly string[]);
+  const list = (typeof keys === 'string' ? [keys] : keys) as readonly (string | { name: string; weight?: number })[];
+  const fields = list.map((key) =>
+    typeof key === 'string' ? { name: key, weight: 1 } : { name: key.name, weight: key.weight ?? 1 },
+  );
   return (item) => {
-    const texts: string[] = [];
-    for (const key of list) {
-      const value = (item as Record<string, unknown> | null)?.[key];
-      if (Array.isArray(value)) for (const v of value) texts.push(toText(v));
-      else if (value != null) texts.push(toText(value));
+    const out: ItemTexts = { texts: [], weights: [] };
+    for (const field of fields) {
+      pushTexts(out, (item as Record<string, unknown> | null)?.[field.name], field.weight);
     }
-    return texts;
+    return out;
   };
 }
 
@@ -141,22 +167,36 @@ function buildEntries<T>(items: readonly T[], keys: KeysOption<T> | undefined, e
   // "zep stair" finds { title: 'Stairway to Heaven', artist: 'Led Zeppelin' }.
   const joinTexts = engine.options.partial;
   return items.map((item, index) => {
-    let texts = getTexts(item).filter((t) => t !== '');
-    if (joinTexts && texts.length > 1) texts = [...texts, texts.join(' ')];
-    return { item, index, texts, prepared: texts.map((t) => prepare(engine.normalize(t))) };
+    const { texts, weights } = getTexts(item);
+    if (joinTexts && texts.length > 1) {
+      texts.push(texts.join(' '));
+      weights.push(Math.max(...weights));
+    }
+    const joined = joinTexts && texts.length > 2;
+    return { item, index, texts, weights, joined, prepared: texts.map((t) => prepare(engine.normalize(t))) };
   });
 }
 
 function bestOf<T>(query: Prepared, entry: Entry<T>, engine: Engine, threshold: number): Match<T> | null {
   let best: Match<T> | null = null;
-  for (let i = 0; i < entry.prepared.length; i += 1) {
-    const candidate = entry.prepared[i]!;
-    // Skip what cannot reach the threshold, without computing anything.
-    if (maxPossibleScore(query, candidate, engine.options) + 0.01 < threshold) continue;
-    const score = scorePrepared(query, candidate, engine, undefined, threshold);
-    if (!best || score > best.score) {
-      best = { item: entry.item, score, index: entry.index, text: entry.texts[i]! };
+  // One scan of the joined text bounds the scans of every part of it.
+  const container = entry.joined ? entry.prepared[entry.prepared.length - 1]! : null;
+  if (container && query.text.length < container.text.length) setSearchHint(query, container);
+  try {
+    for (let i = 0; i < entry.prepared.length; i += 1) {
+      const candidate = entry.prepared[i]!;
+      const weight = entry.weights[i]!;
+      // Skip what cannot reach the threshold, without computing anything.
+      if (maxPossibleScore(query, candidate, engine.options) * weight + 0.01 < threshold) continue;
+      const floor = weight > 0 ? threshold / weight : Infinity;
+      const raw = scorePrepared(query, candidate, engine, undefined, floor, true);
+      const score = weight === 1 ? raw : roundScore(raw * weight);
+      if (!best || score > best.score) {
+        best = { item: entry.item, score, index: entry.index, text: entry.texts[i]! };
+      }
     }
+  } finally {
+    if (container) clearSearchHint();
   }
   return best && best.score >= threshold ? best : null;
 }
@@ -169,13 +209,33 @@ function rank<T>(
   limit: number,
 ): Match<T>[] {
   const prepared = prepare(engine.normalize(toText(query)));
-  const results: Match<T>[] = [];
-  for (const entry of entries) {
-    const match = bestOf(prepared, entry, engine, threshold);
-    if (match) results.push(match);
+  const max = Math.max(0, Math.floor(limit));
+  if (max === 0) return [];
+
+  if (!Number.isFinite(limit) || max >= entries.length) {
+    const results: Match<T>[] = [];
+    for (const entry of entries) {
+      const match = bestOf(prepared, entry, engine, threshold);
+      if (match) results.push(match);
+    }
+    return results.sort((x, y) => y.score - x.score || x.index - y.index).slice(0, max || undefined);
   }
-  results.sort((x, y) => y.score - x.score || x.index - y.index);
-  return Number.isFinite(limit) ? results.slice(0, Math.max(0, limit)) : results;
+
+  // Top-k: once `max` results are kept, a candidate must beat the worst of
+  // them, which lets the cheap bounds skip most of the list.
+  const top: Match<T>[] = [];
+  let floor = threshold;
+  for (const entry of entries) {
+    const match = bestOf(prepared, entry, engine, floor);
+    if (!match) continue;
+    if (top.length === max && match.score <= top[max - 1]!.score) continue;
+    let i = top.length;
+    while (i > 0 && top[i - 1]!.score < match.score) i -= 1;
+    top.splice(i, 0, match);
+    if (top.length > max) top.pop();
+    if (top.length === max) floor = Math.max(threshold, top[max - 1]!.score + 0.001);
+  }
+  return top;
 }
 
 function grade(
@@ -302,6 +362,8 @@ function matcherFrom(engine: Engine): Matcher {
       ),
     group: <T>(items: readonly T[], options?: MatcherListOptions<T>) =>
       cluster(buildEntries(items, options?.keys, engine), engine, options?.threshold ?? threshold),
+    find: (text, query, options = {}) => findIn(toText(text), toText(query), engine, options.threshold ?? threshold),
+    highlight: (text, query) => highlightIn(toText(text), toText(query), engine, threshold),
     index: <T>(items: readonly T[], options?: MatcherListOptions<T>) => makeIndex(items, options?.keys, engine),
   } as Matcher);
 }
@@ -331,7 +393,7 @@ export function createMatcher(options: MatchOptions = {}): Matcher {
  * @example
  * const index = createIndex(songs, { keys: ['title', 'artist'], preset: 'search' })
  * index.search('queen')       // every Queen song, best first
- * index.closest('bohemian')   // { item: { title: 'Bohemian Rhapsody', ... }, score: 94.5, ... }
+ * index.closest('bohemian')   // { item: { title: 'Bohemian Rhapsody', ... }, score: 94.71, ... }
  */
 export function createIndex<T>(items: readonly T[], ...args: ItemsArgs<T, ListOptions<T>>): Index<T> {
   const options = args[0] as ListOptions<T> | undefined;
@@ -420,7 +482,7 @@ export function closest<T>(
  *
  * @example
  * search('iphone', ['iPhone 15', 'Galaxy S24', 'iphone 14'], { preset: 'search' })
- * // [{ item: 'iPhone 15', score: 94, index: 0, text: 'iPhone 15' }, ...]
+ * // [{ item: 'iPhone 15', score: 96.67, index: 0, text: 'iPhone 15' }, ...]
  *
  * search('queen', songs, { keys: ['title', 'artist'], preset: 'search', limit: 10 })
  */
@@ -458,4 +520,34 @@ export function group<T>(items: readonly T[], ...args: ItemsArgs<T, GroupOptions
   const options = args[0] as GroupOptions<T> | undefined;
   const engine = getEngine(options);
   return cluster(buildEntries(items, options?.keys, engine), engine, engine.options.threshold);
+}
+
+/**
+ * Fuzzy occurrences of `query` inside a longer text, with their positions in
+ * the original text. Detects a title in a chat message, a name in a paragraph,
+ * a product in a review...
+ *
+ * @example
+ * find("je pense que c'est bohemian rapsody de queen", 'Bohemian Rhapsody')
+ * // [{ text: 'bohemian rapsody', start: 19, end: 35, score: 94.12 }]
+ */
+export function find(text: string, query: string, options?: MatchOptions): Found[] {
+  const engine = getEngine(options);
+  return findIn(toText(text), toText(query), engine, engine.options.threshold);
+}
+
+/**
+ * Splits `text` into pieces, marking those that match `query`: whole matches
+ * and word prefixes, typos included. Join the pieces to get the text back.
+ *
+ * @example
+ * highlight('Bohemian Rhapsody', 'bohem')
+ * // [{ text: 'Bohem', match: true }, { text: 'ian Rhapsody', match: false }]
+ *
+ * // React
+ * highlight(song.title, query).map((s, i) => (s.match ? <mark key={i}>{s.text}</mark> : s.text))
+ */
+export function highlight(text: string, query: string, options?: MatchOptions): Segment[] {
+  const engine = getEngine(options);
+  return highlightIn(toText(text), toText(query), engine, engine.options.threshold);
 }

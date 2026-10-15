@@ -47,6 +47,18 @@ Pass an array; `answer` tells which one was closest.
 blindTest.check('zeppelin', ['Led Zeppelin', 'Zeppelin']).answer // 'Zeppelin'
 ```
 
+## Guesses typed in a chat
+
+When players type whole sentences, look for the answer inside the message with `find()`:
+
+```ts
+import { find } from 'guess-rater'
+
+const message = "je crois que c'est bohemian rapsody de queen"
+const hit = find(message, 'Bohemian Rhapsody')[0]
+if (hit) console.log(`Correct! (${hit.text})`)
+```
+
 ## Tuning
 
 ```ts

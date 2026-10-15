@@ -32,7 +32,7 @@ export type Preset = 'music' | 'search' | 'strict';
  * Noise that can be removed before comparing.
  *
  * - `brackets`: anything in `( )`, `[ ]` or `{ }`.
- * - `featuring`: `feat. X`, `ft. X`, `featuring X` until the end.
+ * - `featuring`: `feat. X`, `ft. X`, `featuring X` until the end, and `(with X)`.
  * - `version`: `- Remastered 2011`, `(Live)`, `- Radio Edit`, `(Acoustic)`...
  * - `articles`: a leading article (`the`, `a`, `le`, `la`, `les`, `l'`, `el`, `die`...).
  */
@@ -143,12 +143,29 @@ export type TextKey<T> = {
   string;
 
 /**
- * Where to find the text of an item: a property name, several property names,
- * or a function. Each item may provide several texts; the best one wins.
+ * A property that counts less (or more) than others. Matches on it score
+ * `score × weight`.
+ * @example
+ * keys: ['title', { name: 'artist', weight: 0.8 }]
+ */
+export interface WeightedKey<T> {
+  /** Property holding text. */
+  name: TextKey<T>;
+  /**
+   * Multiplier applied to scores on this property, usually between 0 and 1.
+   * @default 1
+   */
+  weight: number;
+}
+
+/**
+ * Where to find the text of an item: a property name, several property names
+ * (optionally weighted), or a function. Each item may provide several texts;
+ * the best one wins.
  */
 export type KeysOption<T> =
   | TextKey<T>
-  | readonly TextKey<T>[]
+  | readonly (TextKey<T> | WeightedKey<T>)[]
   | ((item: T) => string | readonly string[] | null | undefined);
 
 /** Options of list functions ({@link search}, {@link closest}). */

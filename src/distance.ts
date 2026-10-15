@@ -142,6 +142,49 @@ function editDistance(a: string, b: string, transpositions: boolean): number {
   return dp(a, b, transpositions);
 }
 
+const bag = new Int32Array(0x10000);
+
+let lastMissingLetters = 0;
+
+/**
+ * Bag distance: how many characters one text has that the other lacks,
+ * ignoring order. A lower bound of every edit distance here, whatever the word
+ * order. The same count without spaces is then available from
+ * {@link bagMissingLetters}.
+ */
+export function bagDistance(a: string, b: string): number {
+  for (let i = 0; i < a.length; i += 1) bag[a.charCodeAt(i)]! += 1;
+  for (let i = 0; i < b.length; i += 1) bag[b.charCodeAt(i)]! -= 1;
+  let extraA = 0;
+  let extraB = 0;
+  let spacesA = 0;
+  let spacesB = 0;
+  // Each character's net count is read once, then reset to zero.
+  for (let pass = 0; pass < 2; pass += 1) {
+    const text = pass === 0 ? a : b;
+    for (let i = 0; i < text.length; i += 1) {
+      const code = text.charCodeAt(i);
+      const count = bag[code]!;
+      if (count === 0) continue;
+      if (count > 0) {
+        extraA += count;
+        if (code === 32) spacesA += count;
+      } else {
+        extraB -= count;
+        if (code === 32) spacesB -= count;
+      }
+      bag[code] = 0;
+    }
+  }
+  lastMissingLetters = Math.max(extraA - spacesA, extraB - spacesB);
+  return Math.max(extraA, extraB);
+}
+
+/** {@link bagDistance} of the last call, spaces ignored. */
+export function bagMissingLetters(): number {
+  return lastMissingLetters;
+}
+
 /**
  * Levenshtein distance: minimum number of single-character insertions,
  * deletions and substitutions turning `a` into `b`.

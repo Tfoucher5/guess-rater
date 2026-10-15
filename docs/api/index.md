@@ -80,7 +80,41 @@ interface Match<T> {
 `ListOptions<T>` adds:
 
 - `limit`: maximum number of results (default `Infinity`).
-- `keys`: where the text of an object is. A property name, an array of names, or `(item) => string | string[]`. Required when items are not strings; only properties holding text are accepted.
+- `keys`: where the text of an object is. A property name, an array of names, or `(item) => string | string[]`. Required when items are not strings; only properties holding text are accepted. A name can carry a weight: `['title', { name: 'artist', weight: 0.8 }]` makes artist matches score 80 % of their value.
+
+## find
+
+```ts
+find(text: string, query: string, options?: MatchOptions): Found[]
+```
+
+Fuzzy occurrences of `query` inside a longer text, in reading order, with positions in the original text.
+
+```ts
+interface Found {
+  text: string  // as written in the original text
+  start: number
+  end: number   // text === original.slice(start, end)
+  score: number
+}
+
+find("je crois que c'est bohemian rapsody", 'Bohemian Rhapsody')
+// [{ text: 'bohemian rapsody', start: 19, end: 35, score: 94.12 }]
+```
+
+## highlight
+
+```ts
+highlight(text: string, query: string, options?: MatchOptions): Segment[]
+```
+
+Splits `text` into `{ text, match }` pieces. Whole matches and word prefixes are marked, typos included. Joining the pieces gives the original text back.
+
+```ts
+highlight('Stairway to Heaven - Led Zeppelin', 'zep stair')
+// [{ text: 'Stair', match: true }, { text: 'way to Heaven - Led ', match: false },
+//  { text: 'Zep', match: true }, { text: 'pelin', match: false }]
+```
 
 ## dedupe / group
 
@@ -106,7 +140,7 @@ normalize('Hey Jude - Remastered 2015', { strip: ['version'] }) // 'hey jude'
 createMatcher(options?: MatchOptions): Matcher
 ```
 
-A matcher has `similarity`, `isMatch`, `compare`, `check`, `closest`, `search`, `dedupe`, `group`, `normalize` and `index`, all using its options. List methods accept `keys`, `limit` and `threshold` per call; `check` accepts `threshold` and `closeThreshold`. `matcher.options` holds the resolved options (read-only).
+A matcher has `similarity`, `isMatch`, `compare`, `check`, `closest`, `search`, `find`, `highlight`, `dedupe`, `group`, `normalize` and `index`, all using its options. List methods accept `keys`, `limit` and `threshold` per call; `check` accepts `threshold` and `closeThreshold`. `matcher.options` holds the resolved options (read-only).
 
 ## createIndex
 

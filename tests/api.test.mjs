@@ -180,3 +180,71 @@ test('non-string input never throws', () => {
   assert.equal(similarity(42, '42'), 100);
   assert.equal(check(undefined, 'x').verdict, 'wrong');
 });
+
+test('weighted keys: a lighter property scores less', async () => {
+  const items = [
+    { title: 'Queen of Hearts', artist: 'Fleet Foxes' },
+    { title: 'Bohemian Rhapsody', artist: 'Queen' },
+  ];
+  const results = search('queen', items, { keys: ['title', { name: 'artist', weight: 0.9 }] });
+  assert.deepEqual(results.map((r) => [r.item.title, r.score]), [['Bohemian Rhapsody', 90]]);
+  assert.equal(search('queen', items, { keys: [{ name: 'artist', weight: 0 }] }).length, 0);
+});
+
+test('find: fuzzy occurrences with positions in the original text', async () => {
+  const { find } = await import('../dist/esm/index.js');
+  const message = "je pense que c'est bohemian rapsody de queen";
+  const [hit] = find(message, 'Bohemian Rhapsody');
+  assert.equal(hit.text, 'bohemian rapsody');
+  assert.equal(message.slice(hit.start, hit.end), hit.text);
+  assert.equal(find('I love Stairway to Heaven and stairway to heven', 'stairway to heaven').length, 2);
+  assert.deepEqual(find('nothing here', 'Bohemian Rhapsody'), []);
+  assert.deepEqual(find('', 'x'), []);
+  assert.deepEqual(find('x', ''), []);
+});
+
+test('highlight: segments rebuild the original text', async () => {
+  const { highlight } = await import('../dist/esm/index.js');
+  assert.deepEqual(highlight('Bohemian Rhapsody', 'bohem'), [
+    { text: 'Bohem', match: true },
+    { text: 'ian Rhapsody', match: false },
+  ]);
+  const text = 'Stairway to Heaven - Led Zeppelin';
+  const segments = highlight(text, 'zep stair');
+  assert.equal(segments.map((s) => s.text).join(''), text);
+  assert.deepEqual(segments.filter((s) => s.match).map((s) => s.text), ['Stair', 'Zep']);
+  assert.deepEqual(highlight('Crème brûlée', 'creme')[0], { text: 'Crème', match: true });
+  assert.deepEqual(highlight('abc', ''), [{ text: 'abc', match: false }]);
+  assert.deepEqual(highlight('Hey Jude', 'hey jude'), [{ text: 'Hey Jude', match: true }]);
+});
+
+test('matcher.find and matcher.highlight use the matcher options', () => {
+  const m = createMatcher({ preset: 'music' });
+  assert.equal(m.find('on écoute The Beatles ce soir', 'beatles')[0]?.text, 'Beatles');
+  assert.ok(m.highlight('Hey Jude', 'jude').some((s) => s.match));
+});
+
+test('list pruning never drops or changes a result (fuzz)', () => {
+  const words = ['stair', 'way', 'heaven', 'bohemian', 'rhapsody', 'queen', 'jude', 'hey', 'love', 'é', 'a'];
+  let seed = 7;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const phrase = () => Array.from({ length: 1 + Math.floor(rnd() * 4) }, () => {
+    const w = words[Math.floor(rnd() * words.length)];
+    return rnd() < 0.3 ? w.slice(0, Math.max(1, Math.floor(rnd() * w.length))) : w;
+  }).join(rnd() < 0.2 ? '' : ' ');
+  const items = Array.from({ length: 300 }, phrase);
+  for (const options of [{}, { preset: 'search' }, { preset: 'strict' }, { threshold: 50 }, { preset: 'search', threshold: 90 }]) {
+    for (let i = 0; i < 40; i += 1) {
+      const query = phrase();
+      // Threshold 0 disables every shortcut: it is the reference.
+      const threshold = options.threshold ?? (options.preset === 'search' ? 70 : options.preset === 'strict' ? 90 : 80);
+      const expected = search(query, items, { ...options, threshold: 0 })
+        .filter((r) => r.score >= threshold)
+        .map(({ item, index, score }) => ({ item, index, score }));
+      const actual = search(query, items, options).map(({ item, index, score }) => ({ item, index, score }));
+      assert.deepEqual(actual, expected, `${JSON.stringify(options)} ${query}`);
+      const top = search(query, items, { ...options, limit: 5 }).map(({ item, index, score }) => ({ item, index, score }));
+      assert.deepEqual(top, expected.slice(0, 5), `top 5 ${JSON.stringify(options)} ${query}`);
+    }
+  }
+});

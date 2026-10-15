@@ -37,11 +37,42 @@ For a list you search only once, `search()` does the same without an index:
 search('iphone', products, { keys: 'name', preset: 'search', limit: 5 })
 ```
 
-## Highlighting what matched
+## Highlight what matched
 
-Each result has `text`, the value that matched (useful when you search several keys):
+`highlight()` splits a text into pieces and marks the ones matching the query, prefixes and typos included:
+
+```ts
+import { highlight } from 'guess-rater'
+
+highlight('Stairway to Heaven', 'stair heven')
+// [{ text: 'Stair', match: true }, { text: 'way to ', match: false }, { text: 'Heaven', match: true }]
+```
+
+```tsx
+// React
+{highlight(song.title, query).map((piece, i) =>
+  piece.match ? <mark key={i}>{piece.text}</mark> : piece.text
+)}
+```
+
+```vue
+<!-- Vue -->
+<template v-for="(piece, i) in highlight(song.title, query)" :key="i">
+  <mark v-if="piece.match">{{ piece.text }}</mark><template v-else>{{ piece.text }}</template>
+</template>
+```
+
+Each result also has `text`, the value that matched, useful when you search several keys:
 
 ```ts
 const [best] = index.search('queen')
 best.text // 'Queen' (the artist, not the title)
+```
+
+## Some fields count less
+
+Give a key a weight to rank its matches lower:
+
+```ts
+createIndex(songs, { keys: ['title', { name: 'artist', weight: 0.8 }], preset: 'search' })
 ```

@@ -30,6 +30,7 @@ export default defineConfig({
           { text: 'Quizzes and blind tests', link: '/recipes/quiz' },
           { text: 'Search as you type', link: '/recipes/search' },
           { text: '"Did you mean…?"', link: '/recipes/did-you-mean' },
+          { text: 'Spot names in a text', link: '/recipes/find-in-text' },
           { text: 'Cleaning data', link: '/recipes/data-cleaning' }
         ]
       },

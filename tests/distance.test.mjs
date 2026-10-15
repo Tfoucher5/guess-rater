@@ -91,3 +91,17 @@ test('searchDistance (bit-parallel) agrees with a naive DP and bounds partial ma
     }
   }
 });
+
+test('bagDistance is a lower bound of damerau, whatever the word order (fuzz)', async () => {
+  const { bagDistance } = await import('../dist/esm/distance.js');
+  for (let i = 0; i < 2000; i += 1) {
+    const a = randomString(30, 'abc d');
+    const b = randomString(30, 'abc d');
+    const bd = bagDistance(a, b);
+    assert.ok(bd <= damerau(a, b), `${a} / ${b}`);
+    const sorted = (s) => s.split(' ').sort().join(' ');
+    assert.ok(bd <= damerau(sorted(a), sorted(b)) + 0, `${a} / ${b} sorted`);
+  }
+  assert.equal(bagDistance('aab', 'abb'), 1);
+  assert.equal(bagDistance('abc', 'xyz'), 3);
+});

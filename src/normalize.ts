@@ -17,7 +17,10 @@ const VERSION_WORDS =
   'remaster(?:ed)?|live|version|edit|mix|remix|mono|stereo|acoustic|acoustique|demo|instrumental|deluxe|bonus|single|radio|extended|unplugged|explicit|clean|original|reprise|edition|session|take|bande originale|from';
 
 const STRIP_PATTERNS: Readonly<Record<StripRule, readonly RegExp[]>> = {
-  featuring: [/[([{]?\s*\b(?:feat|ft|featuring)\b\.?\s.*$/iu],
+  featuring: [
+    /[([{]?\s*\b(?:feat|ft|featuring)\b\.?\s.*$/iu,
+    /[([{]\s*(?:with|avec|con)\s[^)\]}]*[)\]}]/giu,
+  ],
   version: [
     new RegExp(`[([{][^)\\]}]*\\b(?:${VERSION_WORDS})\\b[^)\\]}]*[)\\]}]`, 'giu'),
     new RegExp(`\\s[-–—/|]\\s.*\\b(?:${VERSION_WORDS})\\b.*$`, 'iu'),
