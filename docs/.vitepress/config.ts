@@ -1,60 +1,46 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Guess‑Rater',
-  description: 'Fuzzy string matching for JavaScript',
+  title: 'guess-rater',
+  description: 'Fuzzy string matching that just works',
 
   base: '/guess-rater/',
 
   themeConfig: {
     nav: [
-      { text: 'Guide', link: '/guide/quickstart' },
-      { text: 'API', link: '/api/exports' },
-      { text: 'Recipes', link: '/recipes/person-name' }
+      { text: 'Guide', link: '/guide/getting-started' },
+      { text: 'Recipes', link: '/recipes/quiz' },
+      { text: 'API', link: '/api/' }
     ],
 
     sidebar: [
       {
         text: 'Guide',
         items: [
-          { text: 'Installation', link: '/guide/installation' },
-          { text: 'Quickstart', link: '/guide/quickstart' },
-          { text: 'Concepts', link: '/guide/concepts' },
-          { text: 'Algorithms', link: '/guide/algorithms' },
-          { text: 'Normalization', link: '/guide/normalization' },
-          { text: 'Thresholds', link: '/guide/thresholds' },
-          { text: 'Explain mode', link: '/guide/explain-mode' },
-          { text: 'List helpers', link: '/guide/ranking' },
-          { text: 'createMatcher', link: '/guide/matcher' },
-          { text: 'Types & Autocomplete', link: '/guide/types-autocomplete' },
-          { text: 'Troubleshooting', link: '/guide/troubleshooting' },
+          { text: 'Getting started', link: '/guide/getting-started' },
+          { text: 'Options', link: '/guide/options' },
+          { text: 'How it works', link: '/guide/how-it-works' },
+          { text: 'Upgrading from v1', link: '/guide/migration' },
           { text: 'Changelog', link: '/guide/changelog' }
-        ]
-      },
-      {
-        text: 'API Reference',
-        items: [
-          { text: 'All exports', link: '/api/exports' },
-          { text: 'rate()', link: '/api/rate' },
-          { text: 'isMatch()', link: '/api/isMatch' },
-          { text: 'normalize()', link: '/api/normalize' },
-          { text: 'rankCandidates()', link: '/api/rankCandidates' },
-          { text: 'findBestMatch()', link: '/api/findBestMatch' },
-          { text: 'filterMatches()', link: '/api/filterMatches' },
-          { text: 'extract()', link: '/api/extract' },
-          { text: 'createMatcher()', link: '/api/createMatcher' }
         ]
       },
       {
         text: 'Recipes',
         items: [
-          { text: 'Person name matching', link: '/recipes/person-name' },
-          { text: 'Product title matching', link: '/recipes/product-title' },
-          { text: 'Quiz answer validation', link: '/recipes/quiz-answers' },
-          { text: 'Data cleaning & dedupe', link: '/recipes/data-cleaning' }
+          { text: 'Quizzes and blind tests', link: '/recipes/quiz' },
+          { text: 'Search as you type', link: '/recipes/search' },
+          { text: '"Did you mean…?"', link: '/recipes/did-you-mean' },
+          { text: 'Spot names in a text', link: '/recipes/find-in-text' },
+          { text: 'Cleaning data', link: '/recipes/data-cleaning' }
         ]
+      },
+      {
+        text: 'Reference',
+        items: [{ text: 'API', link: '/api/' }]
       }
     ],
+
+    socialLinks: [{ icon: 'github', link: 'https://github.com/Tfoucher5/guess-rater' }],
 
     search: {
       provider: 'local'

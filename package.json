@@ -1,8 +1,31 @@
 {
   "name": "guess-rater",
-  "version": "1.5.0",
-  "type": "module",
-  "description": "A flexible fuzzy matching and string normalization engine for JavaScript.",
+  "version": "2.0.0",
+  "description": "Fuzzy string matching that just works: answer checking for quizzes, search-as-you-type, did-you-mean, fuzzy find and highlight, dedupe. Fast, zero dependencies, fully typed.",
+  "keywords": [
+    "fuzzy",
+    "fuzzy-matching",
+    "fuzzy-search",
+    "string-similarity",
+    "levenshtein",
+    "damerau-levenshtein",
+    "jaro-winkler",
+    "typo",
+    "autocomplete",
+    "search",
+    "quiz",
+    "blind-test",
+    "answer-checking",
+    "dedupe",
+    "normalize",
+    "typescript",
+    "highlight",
+    "fuzzy-find",
+    "spell-check",
+    "did-you-mean"
+  ],
+  "license": "MIT",
+  "author": "Theo Foucher",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Tfoucher5/guess-rater.git"
@@ -11,39 +34,45 @@
     "url": "https://github.com/Tfoucher5/guess-rater/issues"
   },
   "homepage": "https://tfoucher5.github.io/guess-rater/",
-  "keywords": [
-    "fuzzy-matching",
-    "levenshtein",
-    "jaro-winkler",
-    "token-sort",
-    "token-set",
-    "string-similarity",
-    "data-normalization",
-    "search",
-    "matching",
-    "vanilla-js",
-    "data-validation"
-  ],
-  "license": "MIT",
-  "author": "Theo Foucher",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
   },
-  "types": "./src/index.d.ts",
   "files": [
-    "src",
+    "dist",
     "README.md",
     "LICENSE"
   ],
   "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "test": "node --test",
-    "test:watch": "node --test --watch",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/tsconfig.json",
+    "test": "npm run build && node --test tests/*.test.mjs tests/*.test.cjs",
+    "bench": "npm run build && node bench/bench.mjs",
+    "prepublishOnly": "npm test",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "bench:real": "npm run build && node bench/real-data.mjs"
   },
   "devDependencies": {
+    "typescript": "^5.9.3",
     "vitepress": "^1.6.4"
   }
 }

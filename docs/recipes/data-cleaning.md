@@ -1,117 +1,59 @@
-# Recipe: Data cleaning & deduplication
+# Cleaning data
 
-## The challenge
+## Remove near-duplicates
 
-Raw datasets contain the same entity under different formats:
+`dedupe()` keeps the first occurrence of each group of similar items.
 
+```ts
+import { dedupe } from 'guess-rater'
+
+dedupe(['Hey Jude', 'hey jude - Remastered 2015', 'Let It Be'], { preset: 'music' })
+// ['Hey Jude', 'Let It Be']
+
+dedupe(companies, { keys: 'name', ignoreWords: ['sarl', 'sas', 'inc', 'ltd'] })
 ```
-"Apple Inc."     vs  "APPLE INC"        → duplicate
-"Café de Paris"  vs  "cafe de paris"    → duplicate
-"Jean Dupont"    vs  "Dupont, Jean"     → duplicate
-"Samsung Galaxy" vs  "Galaxy Samsung"   → duplicate
+
+## See the groups
+
+`group()` returns every group, in the original order, so you can review before merging.
+
+```ts
+import { group } from 'guess-rater'
+
+group(['Jean Dupont', 'Dupont Jean', 'J. Dupont', 'Marie Curie'], { threshold: 70 })
 ```
 
-## Recommended configuration
+An item joins the first group whose first item it matches.
 
-```js
-import { createMatcher, normalize, rankCandidates } from 'guess-rater'
+## Match two lists
 
-const matcher = createMatcher({
-  algorithm: 'hybrid',
-  normalize: {
-    removeAccents: true,
-    removePunctuation: true,
-    sortTokens: true
-  },
-  threshold: 90    // strict — prefer false negatives over false positives
+`join()` pairs each row of one list with its best match in another: two exports of the same customers, free-text input against a reference list, two catalogs to merge.
+
+```ts
+import { join } from 'guess-rater'
+
+join(['Apple Inc.', 'Microsoft Corp', 'Nokia'], ['MICROSOFT CORPORATION', 'Apple', 'Google LLC'], {
+  ignoreWords: ['inc', 'corp', 'corporation', 'llc'],
 })
-```
-
-**Why 90+?** Deduplication errors are costly. A false positive merges two different entities. Err on the side of caution.
-
-**Why sortTokens?** "Jean Dupont" and "Dupont Jean" are the same entity.
-
-## Normalize first, compare second
-
-Pre-normalize your dataset once before comparison loops:
-
-```js
-const normalized = rawData.map(item => ({
-  original: item,
-  normalized: normalize(item, {
-    removeAccents: true,
-    removePunctuation: true,
-    sortTokens: true
-  })
-}))
-```
-
-## Detect duplicates in a list
-
-```js
-function findDuplicates(items, threshold = 90) {
-  const duplicates = []
-
-  for (let i = 0; i < items.length; i++) {
-    const candidates = items.slice(i + 1)
-    const ranked = matcher.rankCandidates(items[i], candidates)
-    const matches = ranked.filter(r => r.score >= threshold)
-
-    if (matches.length > 0) {
-      duplicates.push({ source: items[i], matches: matches.map(m => m.value) })
-    }
-  }
-
-  return duplicates
-}
-
-findDuplicates(['Apple Inc.', 'APPLE INC', 'Google', 'google LLC'])
 // [
-//   { source: 'Apple Inc.', matches: ['APPLE INC'] },
-//   { source: 'Google', matches: ['google LLC'] }
+//   { item: 'Apple Inc.', index: 0, match: { item: 'Apple', score: 100, ... } },
+//   { item: 'Microsoft Corp', index: 1, match: { item: 'MICROSOFT CORPORATION', score: 100, ... } },
+//   { item: 'Nokia', index: 2, match: undefined },
 // ]
 ```
 
-## Match incoming data to a reference list
+With objects, say where the text is on each side with `left` and `right`. Add `unique: true` so each right item is used at most once: when two rows want the same one, the better match gets it and the other takes its next best choice.
 
-When importing data, match each new entry to the existing canonical list:
-
-```js
-const canonicalList = ['Apple Inc.', 'Google LLC', 'Microsoft Corp.']
-
-function matchToCanonical(rawValue) {
-  const result = matcher.findBestMatch(rawValue, canonicalList)
-  if (result && result.score >= 90) {
-    return result.value  // known entity
-  }
-  return null  // new entity — add to canonical list
-}
-
-matchToCanonical('APPLE INC')   // 'Apple Inc.'
-matchToCanonical('apple inc.')  // 'Apple Inc.'
-matchToCanonical('Meta')        // null — not in list
+```ts
+const rows = join(orders, customers, { left: 'customerName', right: 'name', unique: true })
+const unmatched = rows.filter((row) => !row.match)
 ```
 
-## Investigate edge cases with explain mode
+## Map messy values to a clean list
 
-When a match is unexpected, inspect the normalized forms:
+```ts
+import { createMatcher } from 'guess-rater'
 
-```js
-matcher.rate('Google', 'google LLC', { explain: true })
-// { score: 87, normalizedLeft: 'google', normalizedRight: 'google llc', ... }
-// → 'llc' is adding noise → add it to removeWords
+const country = createMatcher({ replace: { usa: 'united states', uk: 'united kingdom' } })
+const clean = rows.map((row) => country.closest(row.country, COUNTRIES)?.item ?? null)
 ```
-
-```js
-const matcher = createMatcher({
-  algorithm: 'hybrid',
-  normalize: {
-    removeAccents: true,
-    removePunctuation: true,
-    sortTokens: true,
-    removeWords: ['inc', 'llc', 'corp', 'ltd', 'sa', 'sas']  // legal suffixes
-  }
-})
-```
-
-→ [Normalization guide](/guide/normalization) | [Explain mode](/guide/explain-mode) | [createMatcher](/guide/matcher)

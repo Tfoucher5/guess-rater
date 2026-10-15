@@ -9,6 +9,44 @@ The project follows **semantic versioning**:
 
 ---
 
+## v2.0.0
+
+A rewrite focused on doing the right thing by default. See [Upgrading from v1](/guide/migration).
+
+### Added
+- `check()`: grades a guess as `correct`, `close` or `wrong` against one or several answers.
+- `checkAll()`: grades a guess that names several things, such as a title and an artist.
+- `join()`: pairs each item of a list with its best match in another.
+- `numbers` option, on by default: `two`, `deux`, `II` and `2` compare equal.
+- `search()`, `closest()`, `dedupe()` and `group()`, working with strings or objects (`keys`).
+- `createIndex()`: pre-processes a list once for fast repeated searches.
+- `find()`: fuzzy occurrences of a query inside a longer text, with positions.
+- `highlight()`: splits a text into matching and non-matching pieces for display.
+- Weighted keys: `keys: ['title', { name: 'artist', weight: 0.8 }]`.
+- `compare()`: normalized texts and the score of each strategy.
+- Presets: `music`, `search`, `strict`.
+- `strip` rules: `featuring`, `version`, `brackets`, `articles`.
+- `partial` matching for search-as-you-type.
+- Raw `damerau()` distance (swapped letters count once).
+- CommonJS build alongside ESM. Sources in TypeScript.
+
+### Changed
+- New default algorithm `smart`: Damerau-Levenshtein, word order and missing spaces ignored.
+- Options are flat (no more `normalize: { ... }` block).
+- Functions always return the same type (no more `explain` or `return: 'entries'` switches).
+- Ligatures (`œ`, `æ`, `ß`) are expanded; apostrophes are removed (`don't` → `dont`).
+- Much faster: bit-parallel distances, compiled options, length-based pruning.
+
+### Removed
+- `rate`, `getSimilarityScore`, `rankCandidates`, `findBestMatch`, `filterMatches`, `extract`, `normalizeString`, `getLevenshteinDistance`, `getLevenshteinScore`, `getJaroScore`, `getJaroWinklerScore`, `getTokenSortScore`, `getTokenSetScore`.
+- `hybrid` algorithm (replaced by `smart`).
+
+### Fixed
+- `replace` replaced text inside words; it now works on whole words.
+- Texts made only of punctuation scored 100 against each other in answers.
+
+---
+
 ## v1.5.0
 
 ### Added
@@ -22,8 +60,8 @@ The project follows **semantic versioning**:
 ### Improved
 - **Documentation overhaul** — complete rewrite of all guide and API pages:
   - No repeated option descriptions — API pages link to canonical guide sections
-  - New [List helpers](/guide/ranking) guide with comparison table for `rankCandidates`, `findBestMatch`, `filterMatches`, `extract`
-  - Hybrid algorithm documentation merged into the [Algorithms guide](/guide/algorithms)
+  - New List helpers guide with comparison table for `rankCandidates`, `findBestMatch`, `filterMatches`, `extract`
+  - Hybrid algorithm documentation merged into the Algorithms guide
   - All recipe pages rewritten with real examples and cross-links
   - Explain mode, normalization, algorithms and threshold guides significantly improved
 - Test structure: `spaceInsensitive` tests were incorrectly nested inside a parent test — moved to top level for proper isolation

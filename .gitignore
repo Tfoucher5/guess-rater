@@ -12,3 +12,6 @@ Thumbs.db
 
 docs/.vitepress/dist
 docs/.vitepress/cache
+dist/
+
+bench/.data/
