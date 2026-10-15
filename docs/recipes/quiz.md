@@ -47,6 +47,30 @@ Pass an array; `answer` tells which one was closest.
 blindTest.check('zeppelin', ['Led Zeppelin', 'Zeppelin']).answer // 'Zeppelin'
 ```
 
+## Title and artist in one guess
+
+`checkAll()` looks for each part anywhere in the guess, so players can give the title, the artist or both, in any order. Score each part separately:
+
+```ts
+import { checkAll } from 'guess-rater'
+
+const song = { title: 'Bohemian Rhapsody - Remastered 2011', artist: 'Queen' }
+
+const result = checkAll('bohemian rapsody de queen', song, { preset: 'music' })
+result.correct // true: every part was found
+result.found   // ['title', 'artist']
+
+checkAll('queen', song, { preset: 'music' }).found // ['artist']
+
+const points = result.found.length // 1 point per part
+```
+
+Each entry of `result.parts` is a regular `check()` result, so `result.parts.title.close` tells you to say "almost!". A part can list several accepted answers: `{ artist: ['The Beatles', 'Fab Four'] }`.
+
+## Numbers
+
+Numbers in words, in digits and in roman numerals are the same answer: `2 Become 1` matches `Two Become One`, `rocky 2` matches `Rocky II`, `vingt et un` matches `21`. Turn it off with `numbers: false`.
+
 ## Guesses typed in a chat
 
 When players type whole sentences, look for the answer inside the message with `find()`:

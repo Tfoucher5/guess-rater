@@ -38,6 +38,7 @@ Before comparing, both texts are cleaned up. [`normalize()`](/api/#normalize) sh
 | `strip` | `[]` | Noise to drop, see below. |
 | `replace` | `{}` | Whole-word replacements: `{ st: 'saint', nyc: 'new york city' }`. `st` never touches `stairs`. |
 | `ignoreWords` | `[]` | Whole words to drop: `['inc', 'ltd', 'sarl']`. |
+| `numbers` | `true` | Numbers in words (English, French) and roman numerals become digits: `two` → `2`, `vingt et un` → `21`, `XIV` → `14`, `first` → `1st`. Single letters (`I`, `X`) stay. `false` with the `search` preset, so `sev` still finds `Seven`. |
 
 ### `strip` rules
 

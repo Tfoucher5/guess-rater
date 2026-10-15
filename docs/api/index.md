@@ -54,6 +54,29 @@ interface CheckResult {
 
 `CheckOptions` adds `closeThreshold` (default `threshold - 15`). See [Quizzes](/recipes/quiz).
 
+## checkAll
+
+```ts
+checkAll<K extends string>(guess: string, answers: Record<K, string | readonly string[]>, options?: CheckOptions): MultiCheckResult<K>
+```
+
+Finds each part of the answer anywhere in the guess, typos included.
+
+```ts
+checkAll('bohemian rapsody de queen', { title: 'Bohemian Rhapsody', artist: 'Queen' })
+// { correct: true, found: ['title', 'artist'], missing: [], parts: { title: CheckResult, artist: CheckResult } }
+```
+
+`correct` is true when every part is found. See [Quizzes](/recipes/quiz#title-and-artist-in-one-guess).
+
+## join
+
+```ts
+join<L, R>(left: readonly L[], right: readonly R[], options?: JoinOptions<L, R>): JoinRow<L, R>[]
+```
+
+One row per left item, in order: `{ item, index, match }`, where `match` is the best right item as a `Match<R>`, or `undefined`. Options: `left` and `right` say where the text is (required for objects), `unique: true` uses each right item at most once. See [Cleaning data](/recipes/data-cleaning#match-two-lists).
+
 ## closest
 
 ```ts

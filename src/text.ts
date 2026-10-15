@@ -1,5 +1,5 @@
 import { prefixDistance } from './distance.js';
-import { prepare, scorePrepared, type Engine } from './engine.js';
+import { scorePrepared, type Engine } from './engine.js';
 
 /** A fuzzy occurrence of a query inside a longer text. */
 export interface Found {
@@ -43,7 +43,7 @@ function allowance(length: number): number {
 }
 
 export function findIn(text: string, query: string, engine: Engine, threshold: number): Found[] {
-  const q = prepare(engine.normalize(query));
+  const q = engine.read(query);
   if (q.text === '' || text === '') return [];
   const tokens = tokenize(text, engine);
   const k = q.words.length;
@@ -51,12 +51,12 @@ export function findIn(text: string, query: string, engine: Engine, threshold: n
   const candidates: Found[] = [];
   for (const size of new Set([Math.max(1, k - 1), k, k + 1])) {
     for (let i = 0; i + size <= tokens.length; i += 1) {
-      const window = tokens.slice(i, i + size);
-      const candidate = prepare(window.map((t) => t.normalized).join(' '));
+      const start = tokens[i]!.start;
+      const end = tokens[i + size - 1]!.end;
+      // Normalize the window as a whole: "twenty one" reads as "21", "the beatles" loses its article.
+      const candidate = engine.read(text.slice(start, end));
       const score = scorePrepared(q, candidate, engine, undefined, threshold);
       if (score < threshold) continue;
-      const start = window[0]!.start;
-      const end = window[window.length - 1]!.end;
       candidates.push({ text: text.slice(start, end), start, end, score });
     }
   }
@@ -74,7 +74,7 @@ export function highlightIn(text: string, query: string, engine: Engine, thresho
   const ranges: [number, number][] = findIn(text, query, engine, threshold).map((f) => [f.start, f.end]);
 
   // Word by word too, so "bohem" lights up the start of "Bohemian".
-  const words = prepare(engine.normalize(query)).words;
+  const words = engine.read(query).words;
   if (words.length > 0) {
     for (const token of tokenize(text, engine)) {
       for (const word of words) {

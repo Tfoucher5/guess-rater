@@ -2,7 +2,6 @@ import {
   compileEngine,
   getEngine,
   maxPossibleScore,
-  prepare,
   roundScore,
   scorePrepared,
   setSearchHint,
@@ -18,10 +17,13 @@ import type {
   CheckResult,
   Comparison,
   GroupOptions,
+  JoinOptions,
+  JoinRow,
   KeysOption,
   ListOptions,
   Match,
   MatchOptions,
+  MultiCheckResult,
 } from './types.js';
 
 /**
@@ -31,6 +33,18 @@ import type {
 export type ItemsArgs<T, O> = [T] extends [string]
   ? [options?: O]
   : [options: O & { keys: KeysOption<T> }];
+
+/**
+ * Makes `left` and `right` required in {@link join} for the lists whose items
+ * are objects.
+ */
+export type JoinArgs<L, R, O> = [L] extends [string]
+  ? [R] extends [string]
+    ? [options?: O]
+    : [options: O & { right: KeysOption<R> }]
+  : [R] extends [string]
+    ? [options: O & { left: KeysOption<L> }]
+    : [options: O & { left: KeysOption<L>; right: KeysOption<R> }];
 
 /** Per-call options of a matcher's list methods. */
 export interface MatcherListOptions<T> {
@@ -84,6 +98,12 @@ export interface Matcher {
   compare(a: string, b: string): Comparison;
   /** Grades a guess against one or several accepted answers. */
   check(guess: string, answers: string | readonly string[], options?: MatcherCheckOptions): CheckResult;
+  /** Grades a guess that may contain several parts, such as a title and an artist. */
+  checkAll<K extends string>(
+    guess: string,
+    answers: Readonly<Record<K, string | readonly string[]>>,
+    options?: MatcherCheckOptions,
+  ): MultiCheckResult<K>;
   /** The best item for `query`, or `undefined` if none reaches the threshold. */
   closest<T>(query: string, items: readonly T[], ...args: ItemsArgs<T, MatcherListOptions<T>>): Match<T> | undefined;
   /** Items matching `query`, best first. */
@@ -96,6 +116,12 @@ export interface Matcher {
   find(text: string, query: string, options?: { threshold?: number }): Found[];
   /** Splits `text` into pieces, marking the ones that match `query`. */
   highlight(text: string, query: string): Segment[];
+  /** Pairs each item of `left` with its best match in `right`. */
+  join<L, R>(
+    left: readonly L[],
+    right: readonly R[],
+    ...args: JoinArgs<L, R, Pick<JoinOptions<L, R>, 'left' | 'right' | 'unique' | 'threshold'>>
+  ): JoinRow<L, R>[];
   /** Pre-processes a list once, to search it many times. */
   index<T>(items: readonly T[], ...args: ItemsArgs<T, Pick<MatcherListOptions<T>, 'keys'>>): Index<T>;
 }
@@ -173,7 +199,7 @@ function buildEntries<T>(items: readonly T[], keys: KeysOption<T> | undefined, e
       weights.push(Math.max(...weights));
     }
     const joined = joinTexts && texts.length > 2;
-    return { item, index, texts, weights, joined, prepared: texts.map((t) => prepare(engine.normalize(t))) };
+    return { item, index, texts, weights, joined, prepared: texts.map((t) => engine.read(t)) };
   });
 }
 
@@ -208,7 +234,7 @@ function rank<T>(
   threshold: number,
   limit: number,
 ): Match<T>[] {
-  const prepared = prepare(engine.normalize(toText(query)));
+  const prepared = engine.read(toText(query));
   const max = Math.max(0, Math.floor(limit));
   if (max === 0) return [];
 
@@ -246,14 +272,14 @@ function grade(
   closeThreshold: number,
 ): CheckResult {
   const list = typeof answers === 'string' ? [answers] : Array.from(answers ?? [], toText);
-  const prepared = prepare(engine.normalize(toText(guess)));
+  const prepared = engine.read(toText(guess));
   let score = 0;
   let answer: string | undefined;
 
   // An empty guess is never right, even against an empty answer.
   if (prepared.text !== '') {
     for (const candidate of list) {
-      const value = scorePrepared(prepared, prepare(engine.normalize(candidate)), engine);
+      const value = scorePrepared(prepared, engine.read(candidate), engine);
       if (answer === undefined || value > score) {
         score = value;
         answer = candidate;
@@ -262,12 +288,11 @@ function grade(
     }
   }
 
-  let verdict: CheckResult['verdict'] =
-    score >= threshold ? 'correct' : score >= closeThreshold && score > 0 ? 'close' : 'wrong';
+  let verdict = verdictOf(score, threshold, closeThreshold);
 
   // A good chunk of the answer ("bohemian" for "Bohemian Rhapsody") is close too.
   if (verdict === 'wrong' && answer !== undefined) {
-    const target = prepare(engine.normalize(answer));
+    const target = engine.read(answer);
     if (prepared.text.length >= 0.4 * target.text.length && prepared.text.length < target.text.length) {
       const part = (1 - partialDistance(prepared.text, target.text) / prepared.text.length) * 100;
       if (part >= threshold) verdict = 'close';
@@ -280,6 +305,84 @@ function grade(
     score,
     answer: answer ?? list[0],
   };
+}
+
+function verdictOf(score: number, threshold: number, closeThreshold: number): CheckResult['verdict'] {
+  return score >= threshold ? 'correct' : score >= closeThreshold && score > 0 ? 'close' : 'wrong';
+}
+
+const RANK: Readonly<Record<CheckResult['verdict'], number>> = { wrong: 0, close: 1, correct: 2 };
+
+function gradeParts<K extends string>(
+  guess: string,
+  answers: Readonly<Record<K, string | readonly string[]>>,
+  engine: Engine,
+  threshold: number,
+  closeThreshold: number,
+): MultiCheckResult<K> {
+  const text = toText(guess);
+  const parts = {} as Record<K, CheckResult>;
+  const found: K[] = [];
+  const missing: K[] = [];
+  for (const key of Object.keys(answers ?? {}) as K[]) {
+    const accepted = answers[key];
+    const list = typeof accepted === 'string' ? [accepted] : Array.from(accepted ?? [], toText);
+    // The guess as a whole ("queen") or a part of it ("bohemian rapsody de queen").
+    let result = grade(text, list, engine, threshold, closeThreshold);
+    if (!result.correct) {
+      for (const answer of list) {
+        const best = findIn(text, answer, engine, closeThreshold).reduce(
+          (top, f) => (f.score > top.score ? f : top),
+          { score: 0 },
+        );
+        const verdict = verdictOf(best.score, threshold, closeThreshold);
+        if (RANK[verdict] > RANK[result.verdict] || (verdict === result.verdict && best.score > result.score)) {
+          result = { verdict, correct: verdict === 'correct', close: verdict === 'close', score: best.score, answer };
+        }
+      }
+    }
+    parts[key] = result;
+    (result.correct ? found : missing).push(key);
+  }
+  return { correct: missing.length === 0 && found.length > 0, found, missing, parts };
+}
+
+function joinLists<L, R>(
+  left: readonly L[],
+  right: readonly R[],
+  options: Pick<JoinOptions<L, R>, 'left' | 'right' | 'unique'>,
+  engine: Engine,
+  threshold: number,
+): JoinRow<L, R>[] {
+  if (!Array.isArray(left)) throw new TypeError('[guess-rater] Expected an array of left items.');
+  const getTexts = textGetter(options.left);
+  const entries = buildEntries(right, options.right, engine);
+  const candidates = (item: L, limit: number): Match<R>[] => {
+    const byIndex = new Map<number, Match<R>>();
+    for (const text of getTexts(item).texts) {
+      for (const match of rank(text, entries, engine, threshold, limit)) {
+        const seen = byIndex.get(match.index);
+        if (!seen || match.score > seen.score) byIndex.set(match.index, match);
+      }
+    }
+    return [...byIndex.values()].sort((x, y) => y.score - x.score || x.index - y.index);
+  };
+
+  if (!options.unique) {
+    return left.map((item, index) => ({ item, index, match: candidates(item, 1)[0] }));
+  }
+
+  // One right item per left item: the best pairs are made first.
+  const rows: JoinRow<L, R>[] = left.map((item, index) => ({ item, index, match: undefined }));
+  const pairs = left.flatMap((item, index) => candidates(item, 5).map((match) => ({ index, match })));
+  pairs.sort((x, y) => y.match.score - x.match.score || x.index - y.index || x.match.index - y.match.index);
+  const taken = new Set<number>();
+  for (const { index, match } of pairs) {
+    if (rows[index]!.match || taken.has(match.index)) continue;
+    rows[index]!.match = match;
+    taken.add(match.index);
+  }
+  return rows;
 }
 
 function cluster<T>(entries: readonly Entry<T>[], engine: Engine, threshold: number): T[][] {
@@ -304,8 +407,8 @@ function cluster<T>(entries: readonly Entry<T>[], engine: Engine, threshold: num
 }
 
 function compareWith(a: string, b: string, engine: Engine): Comparison {
-  const left = prepare(engine.normalize(toText(a)));
-  const right = prepare(engine.normalize(toText(b)));
+  const left = engine.read(toText(a));
+  const right = engine.read(toText(b));
   const scores: Comparison['scores'] = {};
   const score = scorePrepared(left, right, engine, scores);
   return {
@@ -338,14 +441,20 @@ function matcherFrom(engine: Engine): Matcher {
     options: engine.options,
     normalize: (text) => engine.normalize(toText(text)),
     similarity: (a, b) =>
-      scorePrepared(prepare(engine.normalize(toText(a))), prepare(engine.normalize(toText(b))), engine),
+      scorePrepared(engine.read(toText(a)), engine.read(toText(b)), engine),
     isMatch: (a, b, t = threshold) =>
-      scorePrepared(prepare(engine.normalize(toText(a))), prepare(engine.normalize(toText(b))), engine) >= t,
+      scorePrepared(engine.read(toText(a)), engine.read(toText(b)), engine) >= t,
     compare: (a, b) => compareWith(a, b, engine),
     check: (guess, answers, options = {}) => {
       const t = options.threshold ?? threshold;
       return grade(guess, answers, engine, t, options.closeThreshold ?? t - 15);
     },
+    checkAll: (guess, answers, options = {}) => {
+      const t = options.threshold ?? threshold;
+      return gradeParts(guess, answers, engine, t, options.closeThreshold ?? t - 15);
+    },
+    join: <L, R>(left: readonly L[], right: readonly R[], options: JoinOptions<L, R> = {}) =>
+      joinLists(left, right, options, engine, options.threshold ?? threshold),
     closest: <T>(query: string, items: readonly T[], options?: MatcherListOptions<T>) =>
       rank(query, buildEntries(items, options?.keys, engine), engine, options?.threshold ?? threshold, 1)[0],
     search: <T>(query: string, items: readonly T[], options?: MatcherListOptions<T>) =>
@@ -411,7 +520,7 @@ export function createIndex<T>(items: readonly T[], ...args: ItemsArgs<T, ListOp
  */
 export function similarity(a: string, b: string, options?: MatchOptions): number {
   const engine = getEngine(options);
-  return scorePrepared(prepare(engine.normalize(toText(a))), prepare(engine.normalize(toText(b))), engine);
+  return scorePrepared(engine.read(toText(a)), engine.read(toText(b)), engine);
 }
 
 /**
@@ -457,6 +566,47 @@ export function check(guess: string, answers: string | readonly string[], option
   const engine = getEngine(options);
   const threshold = engine.options.threshold;
   return grade(guess, answers, engine, threshold, options?.closeThreshold ?? threshold - 15);
+}
+
+/**
+ * Grades a guess that may name several things at once, such as a song title
+ * and its artist. Each part is found anywhere in the guess, typos included.
+ *
+ * @example
+ * const result = checkAll('bohemian rapsody de queen', { title: 'Bohemian Rhapsody', artist: 'Queen' })
+ * result.found   // ['title', 'artist']
+ * result.correct // true
+ *
+ * checkAll('queen', { title: 'Bohemian Rhapsody', artist: 'Queen' }).missing // ['title']
+ */
+export function checkAll<K extends string>(
+  guess: string,
+  answers: Readonly<Record<K, string | readonly string[]>>,
+  options?: CheckOptions,
+): MultiCheckResult<K> {
+  const engine = getEngine(options);
+  const threshold = engine.options.threshold;
+  return gradeParts(guess, answers, engine, threshold, options?.closeThreshold ?? threshold - 15);
+}
+
+/**
+ * Pairs each item of `left` with its best match in `right`: reconcile two
+ * exports, map free-text input to a reference list, merge two catalogs.
+ *
+ * @example
+ * join(['Apple Inc.', 'Microsoft Corp'], ['MICROSOFT CORPORATION', 'Apple'], { ignoreWords: ['inc', 'corp', 'corporation'] })
+ * // [{ item: 'Apple Inc.', index: 0, match: { item: 'Apple', ... } }, { item: 'Microsoft Corp', ..., match: { item: 'MICROSOFT CORPORATION', ... } }]
+ *
+ * join(orders, customers, { left: 'customerName', right: 'name', unique: true })
+ */
+export function join<L, R>(
+  left: readonly L[],
+  right: readonly R[],
+  ...args: JoinArgs<L, R, JoinOptions<L, R>>
+): JoinRow<L, R>[] {
+  const options = (args[0] ?? {}) as JoinOptions<L, R>;
+  const engine = getEngine(options);
+  return joinLists(left, right, options, engine, engine.options.threshold);
 }
 
 /**

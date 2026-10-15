@@ -1,5 +1,6 @@
 export {
   check,
+  checkAll,
   closest,
   compare,
   createIndex,
@@ -9,10 +10,11 @@ export {
   group,
   highlight,
   isMatch,
+  join,
   search,
   similarity,
 } from './matcher.js';
-export type { Index, ItemsArgs, Matcher, MatcherCheckOptions, MatcherListOptions } from './matcher.js';
+export type { Index, ItemsArgs, JoinArgs, Matcher, MatcherCheckOptions, MatcherListOptions } from './matcher.js';
 export { normalize } from './normalize.js';
 export type { Found, Segment } from './text.js';
 export { damerau, jaroWinkler, levenshtein } from './distance.js';
@@ -23,10 +25,13 @@ export type {
   CheckResult,
   Comparison,
   GroupOptions,
+  JoinOptions,
+  JoinRow,
   KeysOption,
   ListOptions,
   Match,
   MatchOptions,
+  MultiCheckResult,
   NormalizeOptions,
   Preset,
   StripRule,

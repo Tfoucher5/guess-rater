@@ -15,6 +15,9 @@ A rewrite focused on doing the right thing by default. See [Upgrading from v1](/
 
 ### Added
 - `check()`: grades a guess as `correct`, `close` or `wrong` against one or several answers.
+- `checkAll()`: grades a guess that names several things, such as a title and an artist.
+- `join()`: pairs each item of a list with its best match in another.
+- `numbers` option, on by default: `two`, `deux`, `II` and `2` compare equal.
 - `search()`, `closest()`, `dedupe()` and `group()`, working with strings or objects (`keys`).
 - `createIndex()`: pre-processes a list once for fast repeated searches.
 - `find()`: fuzzy occurrences of a query inside a longer text, with positions.

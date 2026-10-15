@@ -1,3 +1,4 @@
+import { wordsToDigits } from './numbers.js';
 import type { NormalizeOptions, StripRule } from './types.js';
 
 export type Normalizer = (text: string) => string;
@@ -54,6 +55,7 @@ export function compileNormalizer(options: NormalizeOptions = {}): Normalizer {
     strip = [],
     ignoreWords = [],
     replace = {},
+    numbers = true,
   } = options;
 
   const prepare = (text: string): string => {
@@ -105,6 +107,7 @@ export function compileNormalizer(options: NormalizeOptions = {}): Normalizer {
     }
 
     text = text.replace(SPACES_RE, ' ').trim();
+    if (numbers) text = wordsToDigits(text);
 
     if (ignored && ignored.size > 0) {
       text = text
@@ -116,7 +119,7 @@ export function compileNormalizer(options: NormalizeOptions = {}): Normalizer {
   };
 
   if (ignoreWords.length > 0) {
-    const base = compileNormalizer({ caseSensitive, accentSensitive, punctuation });
+    const base = compileNormalizer({ caseSensitive, accentSensitive, punctuation, numbers });
     ignored = new Set(ignoreWords.flatMap((word) => base(word).split(' ')).filter(Boolean));
   }
 
@@ -127,11 +130,12 @@ const defaultNormalizer = compileNormalizer();
 
 /**
  * Cleans up a text the way guess-rater does before comparing: lower case,
- * no accents, no punctuation, single spaces.
+ * no accents, no punctuation, single spaces, numbers as digits.
  *
  * @example
  * normalize('  Saint-Étienne !! ')                       // 'saint etienne'
  * normalize('Hey Jude - Remastered 2015', { strip: ['version'] }) // 'hey jude'
+ * normalize('Two Become One')                            // '2 become 1'
  */
 export function normalize(text: string, options?: NormalizeOptions): string {
   return options ? compileNormalizer(options)(text) : defaultNormalizer(text);

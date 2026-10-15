@@ -23,7 +23,7 @@ export type Algorithm =
  * - `music`: song titles and artists. Drops `(feat. X)`, `- Remastered 2011`,
  *   bracketed info and leading articles (`The`, `Les`...), reads `&` and `n` as `and`.
  * - `search`: search-as-you-type. Matches prefixes and parts of the text
- *   (`partial: true`), threshold 70.
+ *   (`partial: true`), threshold 70, numbers left as written.
  * - `strict`: word order and spaces matter, threshold 90.
  */
 export type Preset = 'music' | 'search' | 'strict';
@@ -84,6 +84,14 @@ export interface NormalizeOptions {
    * replace: { st: 'saint', '&': 'and', nyc: 'new york city' }
    */
   replace?: Readonly<Record<string, string>>;
+
+  /**
+   * Read numbers written in words (English and French) and roman numerals as
+   * digits: `two` = `deux` = `II` = `2`, `twenty one` = `vingt et un` = `21`,
+   * `first` = `1st`. Single letters (`I`, `V`, `X`) are left alone.
+   * @default true (false with the `search` preset, so prefixes keep working)
+   */
+  numbers?: boolean;
 }
 
 /** Everything that controls a comparison. All fields are optional. */
@@ -244,4 +252,40 @@ export interface Comparison {
    * of them.
    */
   scores: Partial<Record<'characters' | 'wordOrder' | 'spaces' | 'partial' | Algorithm, number>>;
+}
+
+/** Result of {@link checkAll}: one verdict per part of the answer. */
+export interface MultiCheckResult<K extends string> {
+  /** Whether every part was found in the guess. */
+  correct: boolean;
+  /** Parts found in the guess, in the order they were given. */
+  found: K[];
+  /** Parts not found (`close` or `wrong`). */
+  missing: K[];
+  /** The detailed result of each part. */
+  parts: Record<K, CheckResult>;
+}
+
+/** Options of {@link join}. */
+export interface JoinOptions<L, R> extends MatchOptions {
+  /** Where to read the text of left items. Required when they are objects. */
+  left?: KeysOption<L>;
+  /** Where to read the text of right items. Required when they are objects. */
+  right?: KeysOption<R>;
+  /**
+   * Use each right item at most once: when two left items want the same one,
+   * the better match gets it and the other takes its next best choice.
+   * @default false
+   */
+  unique?: boolean;
+}
+
+/** One row of {@link join}: a left item and its best match on the right, if any. */
+export interface JoinRow<L, R> {
+  /** The left item. */
+  item: L;
+  /** Position of the left item in its list. */
+  index: number;
+  /** The best right item, or `undefined` if none reaches the threshold. */
+  match: Match<R> | undefined;
 }

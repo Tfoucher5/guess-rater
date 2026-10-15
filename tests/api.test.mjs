@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  similarity, isMatch, compare, check, closest, search, dedupe, group, createMatcher, createIndex,
+  similarity, isMatch, compare, check, checkAll, closest, search, dedupe, group, join, find, createMatcher, createIndex,
 } from '../dist/esm/index.js';
 
 const songs = [
@@ -247,4 +247,61 @@ test('list pruning never drops or changes a result (fuzz)', () => {
       assert.deepEqual(top, expected.slice(0, 5), `top 5 ${JSON.stringify(options)} ${query}`);
     }
   }
+});
+
+test('checkAll: each part found anywhere in the guess', () => {
+  const song = { title: 'Bohemian Rhapsody - Remastered 2011', artist: 'Queen' };
+  const both = checkAll('bohemian rapsody de queen', song, { preset: 'music' });
+  assert.equal(both.correct, true);
+  assert.deepEqual(both.found, ['title', 'artist']);
+  assert.deepEqual(both.missing, []);
+
+  const artistOnly = checkAll('queen', song, { preset: 'music' });
+  assert.equal(artistOnly.correct, false);
+  assert.deepEqual(artistOnly.found, ['artist']);
+  assert.equal(artistOnly.parts.title.verdict, 'wrong');
+
+  assert.equal(checkAll('bohemian', song, { preset: 'music' }).parts.title.verdict, 'close');
+  assert.deepEqual(checkAll('the beatles hey jude', { title: 'Hey Jude', artist: 'The Beatles' }, { preset: 'music' }).found, ['title', 'artist']);
+  assert.deepEqual(checkAll('beatles', { artist: ['The Beatles', 'Fab Four'] }, { preset: 'music' }).found, ['artist']);
+
+  const empty = checkAll('', song);
+  assert.equal(empty.correct, false);
+  assert.deepEqual(empty.missing, ['title', 'artist']);
+  assert.equal(checkAll('anything', {}).correct, false);
+});
+
+test('checkAll: same through a matcher', () => {
+  const quiz = createMatcher({ preset: 'music' });
+  assert.equal(quiz.checkAll('queen bohemian rhapsody', { title: 'Bohemian Rhapsody', artist: 'Queen' }).correct, true);
+});
+
+test('numbers: words, roman numerals and digits compare equal', () => {
+  assert.equal(similarity('2 Become 1', 'Two Become One'), 100);
+  assert.equal(similarity('Louis 14', 'Louis XIV'), 100);
+  assert.equal(check('rocky 2', 'Rocky II').correct, true);
+  assert.equal(check('vingt et un', '21').correct, true);
+  assert.equal(similarity('2 become 1', 'Two Become One', { numbers: false }) < 80, true);
+  // The search preset keeps words, so prefixes work while typing.
+  assert.equal(search('sev', ['Seven Nation Army'], { preset: 'search' }).length, 1);
+  assert.deepEqual(find('on écoute twenty one pilots ce soir', 'Twenty One Pilots').map((f) => f.text), ['twenty one pilots']);
+});
+
+test('join: best match for each left item', () => {
+  const rows = join(['Apple Inc.', 'Microsoft Corp', 'Nokia'], ['MICROSOFT CORPORATION', 'Apple', 'Google LLC'], {
+    ignoreWords: ['inc', 'corp', 'corporation', 'llc'],
+  });
+  assert.deepEqual(rows.map((r) => r.match?.item), ['Apple', 'MICROSOFT CORPORATION', undefined]);
+  assert.deepEqual(rows.map((r) => r.index), [0, 1, 2]);
+});
+
+test('join: objects and unique pairs', () => {
+  const orders = [{ customer: 'Jon Smith' }, { customer: 'John Smith' }];
+  const customers = [{ name: 'John Smith', id: 1 }, { name: 'Jane Smyth', id: 2 }];
+  const loose = join(orders, customers, { left: 'customer', right: 'name', threshold: 60 });
+  assert.deepEqual(loose.map((r) => r.match?.item.id), [1, 1]);
+  const unique = join(orders, customers, { left: 'customer', right: 'name', threshold: 60, unique: true });
+  assert.deepEqual(unique.map((r) => r.match?.item.id), [2, 1]);
+  assert.throws(() => join(orders, customers, { right: 'name' }), /keys/);
+  assert.equal(createMatcher().join(['paris'], ['Paris', 'Lyon'])[0].match?.item, 'Paris');
 });

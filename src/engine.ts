@@ -16,7 +16,8 @@ const PRESETS: Readonly<Record<Preset, MatchOptions>> = {
     strip: ['featuring', 'version', 'brackets', 'articles'],
     replace: { '&': 'and', '+': 'and', n: 'and' },
   },
-  search: { partial: true, threshold: 70 },
+  // Digits would break prefixes while typing: "sev" must still find "Seven".
+  search: { partial: true, threshold: 70, numbers: false },
   strict: { ignoreWordOrder: false, ignoreSpaces: false, threshold: 90 },
 };
 
@@ -38,6 +39,8 @@ export interface ResolvedOptions extends Required<Omit<MatchOptions, 'preset'>> 
 export interface Engine {
   readonly options: ResolvedOptions;
   readonly normalize: Normalizer;
+  /** Normalizes and prepares a raw text for comparisons. */
+  readonly read: (text: string) => Prepared;
 }
 
 /** A normalized text and the variants `smart` needs, computed once. */
@@ -46,6 +49,11 @@ export interface Prepared {
   readonly sorted: string;
   readonly compact: string;
   readonly words: readonly string[];
+  /**
+   * The same text with numbers left as written, when reading them as digits
+   * changed it. A typo in a number word ("twp") still scores against "two".
+   */
+  readonly alt?: Prepared;
 }
 
 export function resolveOptions(options: MatchOptions = {}): ResolvedOptions {
@@ -83,6 +91,7 @@ export function resolveOptions(options: MatchOptions = {}): ResolvedOptions {
     caseSensitive: merged.caseSensitive ?? false,
     accentSensitive: merged.accentSensitive ?? false,
     punctuation: merged.punctuation ?? 'space',
+    numbers: merged.numbers ?? true,
     strip: Object.freeze([...(merged.strip ?? [])]),
     ignoreWords: Object.freeze([...(merged.ignoreWords ?? [])]),
     replace: Object.freeze({ ...merged.replace }),
@@ -97,12 +106,23 @@ function stripUndefined<T extends object>(value: T): Partial<T> {
   return out;
 }
 
+const DIGIT_RE = /\d/;
 const engineCache = new WeakMap<object, Engine>();
 let defaultEngine: Engine | undefined;
 
 export function compileEngine(options: MatchOptions = {}): Engine {
   const resolved = resolveOptions(options);
-  return { options: resolved, normalize: compileNormalizer(resolved) };
+  const normalize = compileNormalizer(resolved);
+  const asWritten = resolved.numbers ? compileNormalizer({ ...resolved, numbers: false }) : null;
+  const read = (raw: string): Prepared => {
+    const text = normalize(raw);
+    const prepared = prepare(text);
+    // Numbers only ever turn into digits: without one, nothing was rewritten.
+    if (!asWritten || !DIGIT_RE.test(text)) return prepared;
+    const written = asWritten(raw);
+    return written === text ? prepared : { ...prepared, alt: prepare(written) };
+  };
+  return { options: resolved, normalize, read };
 }
 
 /**
@@ -207,6 +227,26 @@ type Scores = Comparison['scores'];
 
 /** Scores two prepared texts. Fills `scores` with each strategy's result. */
 export function scorePrepared(
+  a: Prepared,
+  b: Prepared,
+  engine: Engine,
+  scores?: Scores,
+  floor = 0,
+  queryFirst = false,
+): number {
+  const score = scoreOne(a, b, engine, scores, floor, queryFirst);
+  if ((!a.alt && !b.alt) || score === 100) return score;
+  // Also compare the numbers as written; the search hint is about `a` and `b` only.
+  const saved = { ...hint };
+  clearSearchHint();
+  try {
+    return Math.max(score, scoreOne(a.alt ?? a, b.alt ?? b, engine, scores, floor, queryFirst));
+  } finally {
+    Object.assign(hint, saved);
+  }
+}
+
+function scoreOne(
   a: Prepared,
   b: Prepared,
   engine: Engine,
@@ -362,6 +402,11 @@ function lengthBound(x: number, y: number): number {
  * candidates that cannot reach the threshold without computing a distance.
  */
 export function maxPossibleScore(a: Prepared, b: Prepared, options: ResolvedOptions): number {
+  const bound = maxOne(a, b, options);
+  return a.alt || b.alt ? Math.max(bound, maxOne(a.alt ?? a, b.alt ?? b, options)) : bound;
+}
+
+function maxOne(a: Prepared, b: Prepared, options: ResolvedOptions): number {
   const { algorithm } = options;
   if (algorithm === 'jaroWinkler' || algorithm === 'tokenSet') return 100;
   if (algorithm === 'smart' && options.partial) return 100;

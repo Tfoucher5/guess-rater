@@ -4,7 +4,7 @@ layout: home
 hero:
   name: guess-rater
   text: Fuzzy matching that just works
-  tagline: Check answers, search as you type, spot names in a message, clean up duplicates. Typos, accents, word order and noise like "(feat. X)" are handled for you.
+  tagline: Check answers, search as you type, spot names in a message, clean up duplicates, match two lists. Typos, accents, word order, numbers in words and noise like "(feat. X)" are handled for you.
   actions:
     - theme: brand
       text: Get started
@@ -22,7 +22,7 @@ features:
     details: One smart score that forgives typos, swapped letters, accents, word order and missing spaces. On 3,000 simulated blind-test guesses, 97.6% of right answers were accepted and 0% of wrong ones.
   - icon: 🧰
     title: One function per job
-    details: check() grades answers, search() and createIndex() power search boxes, closest() suggests corrections, find() spots text in a message, dedupe() cleans data.
+    details: check() and checkAll() grade answers, search() and createIndex() power search boxes, closest() suggests corrections, find() spots text in a message, dedupe() and join() clean data.
   - icon: ⚡
     title: Fast
     details: Bit-parallel edit distances and pre-built indexes. Searching 26,000 songs takes about 40 ms per keystroke, about 5 times faster than Fuse.js on the same data.
@@ -61,6 +61,9 @@ features:
 ```ts
 check('bohemian rapsody', 'Bohemian Rhapsody')
 // → { verdict: 'correct', score: 94.12 }
+checkAll('bohemian rapsody de queen',
+  { title: 'Bohemian Rhapsody', artist: 'Queen' })
+// → { correct: true, found: ['title', 'artist'] }
 ```
 
 </div>
@@ -120,6 +123,28 @@ dedupe(['Hey Jude', 'hey jude - Remastered'],
 ```
 
 </div>
+<div class="home-card">
+
+### Match two lists
+
+```ts
+join(['Apple Inc.', 'Microsoft Corp'],
+     ['MICROSOFT CORPORATION', 'Apple'],
+     { ignoreWords: ['inc', 'corp', 'corporation'] })
+// → each row with its best match
+```
+
+</div>
+<div class="home-card">
+
+### Numbers, any way they're written
+
+```ts
+similarity('2 Become 1', 'Two Become One') // → 100
+check('rocky 2', 'Rocky II').correct       // → true
+```
+
+</div>
 </div>
 
 </div>
@@ -136,7 +161,7 @@ dedupe(['Hey Jude', 'hey jude - Remastered'],
 | Wrong songs accepted | **0 %** |
 | Same guesses with guess-rater 1.x `isMatch()` | 70.1 % |
 | Same guesses with string-similarity (≥ 0.8) | 57.0 % |
-| Time per `check()` | ~20 µs |
+| Time per `check()` | ~25 µs |
 
 | Search and suggestions | Result |
 | --- | --- |
@@ -193,7 +218,7 @@ npm install guess-rater
 ```
 
 ```ts
-import { check, search, closest, find, highlight, dedupe } from 'guess-rater'
+import { check, checkAll, search, closest, find, highlight, dedupe, join } from 'guess-rater'
 ```
 
 </div>

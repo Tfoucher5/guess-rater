@@ -59,3 +59,18 @@ test('non-string input never throws', () => {
   assert.equal(normalize(null), '');
   assert.equal(normalize(42), '42');
 });
+
+test('numbers: words and roman numerals become digits', () => {
+  assert.equal(normalize('Two Become One'), '2 become 1');
+  assert.equal(normalize('twenty-one pilots'), '21 pilots');
+  assert.equal(normalize('quatre-vingt-dix-neuf'), '99');
+  assert.equal(normalize('soixante et onze'), '71');
+  assert.equal(normalize('dix-sept'), '17');
+  assert.equal(normalize('Louis XIV'), 'louis 14');
+  assert.equal(normalize('The Seventh Seal'), 'the 7th seal');
+  assert.equal(normalize('deuxième 3ème premier'), '2e 3e 1er');
+  // Single letters and words that only look like numerals stay.
+  assert.equal(normalize('I Will Survive'), 'i will survive');
+  assert.equal(normalize('Malcolm X mix'), 'malcolm x mix');
+  assert.equal(normalize('Two', { numbers: false }), 'two');
+});

@@ -60,3 +60,22 @@ export { s1, s2, s3, verdict, result, m1, deduped, first };
 search('queen', songs, { keys: ['title', { name: 'artist', weight: 0.8 }] });
 // @ts-expect-error weighted key must name a text property
 search('queen', songs, { keys: [{ name: 'year', weight: 1 }] });
+
+// checkAll keeps the part names.
+import { checkAll, join, type MultiCheckResult, type JoinRow } from '../src/index.js';
+const parts: MultiCheckResult<'title' | 'artist'> = checkAll('x', { title: 'a', artist: ['b', 'c'] });
+const missingTitle: boolean = parts.parts.title.correct;
+// @ts-expect-error unknown part
+parts.parts.album;
+
+// join: keys required for object lists, checked against each side.
+const j1: JoinRow<string, string>[] = join(['a'], ['b']);
+const j2: JoinRow<Song, string>[] = join(songs, ['b'], { left: 'title' });
+join(songs, songs, { left: 'title', right: 'artist', unique: true });
+// @ts-expect-error left keys are required for objects
+join(songs, ['b']);
+// @ts-expect-error right keys are required for objects
+join(['a'], songs, {});
+// @ts-expect-error not a text property
+join(songs, ['b'], { left: 'year' });
+void [missingTitle, j1, j2];
